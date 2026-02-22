@@ -15,16 +15,58 @@ class VentanaPrincipal(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Resolución de Ecuaciones No Lineales - Alexander von Humboldt")
-        self.geometry("1000x700")
+        self.geometry("1050x750")
+        self.configure(bg="#f4f5f7") # Un fondo gris claro muy moderno
+
+        self.configurar_estilos() # <--- Añade esta línea
 
         # Inicialización de la estructura visual principal
         self.crear_panel_entrada()
         self.crear_tabla_resultados()
         self.crear_panel_graficas()
 
+    def configurar_estilos(self):
+        """Aplica un tema oscuro nativo (Dark Mode) usando ttk."""
+        self.configure(bg="#2b2b2b")  # Fondo principal oscuro de la ventana
+        self.estilo = ttk.Style()
+
+        # Usamos 'clam' como lienzo en blanco porque es el más personalizable
+        if 'clam' in self.estilo.theme_names():
+            self.estilo.theme_use('clam')
+
+        # Paleta de colores estilo IDE profesional
+        bg_color = "#3c3f41"
+        fg_color = "#a9b7c6"
+        btn_color = "#4b6eaf"
+        acento = "#cc7832"  # Un tono naranja para resaltar
+
+        # Estilo de textos y botones
+        self.estilo.configure("TLabel", font=("Segoe UI", 10), background=bg_color, foreground=fg_color)
+        self.estilo.configure("TButton", font=("Segoe UI", 10, "bold"), background=btn_color, foreground="white",
+                              padding=6)
+        self.estilo.map("TButton", background=[('active', '#365880')])  # Brillo al pasar el mouse
+
+        # Estilo de los contenedores
+        self.estilo.configure("TLabelframe", background=bg_color, foreground=fg_color, bordercolor="#555555")
+        self.estilo.configure("TLabelframe.Label", font=("Segoe UI", 11, "bold"), background=bg_color,
+                              foreground=acento)
+
+        # Estilo de la tabla de resultados
+        self.estilo.configure("Treeview",
+                              font=("Consolas", 10),
+                              rowheight=25,
+                              background="#2b2b2b",
+                              fieldbackground="#2b2b2b",
+                              foreground=fg_color)
+
+        self.estilo.configure("Treeview.Heading",
+                              font=("Segoe UI", 10, "bold"),
+                              background="#323232",
+                              foreground=acento)
+
     def crear_panel_entrada(self):
         """Construye el panel superior para los parámetros de entrada del usuario."""
-        frame_inputs = tk.LabelFrame(self, text="Parámetros de Entrada")
+        frame_inputs = ttk.LabelFrame(self, text="  Parámetros de Entrada  ")
         frame_inputs.pack(fill="x", padx=10, pady=5)
 
         # Selección del método
@@ -59,7 +101,7 @@ class VentanaPrincipal(tk.Tk):
 
     def crear_tabla_resultados(self):
         """Configura el componente Treeview para mostrar el historial de iteraciones."""
-        frame_tabla = tk.LabelFrame(self, text="Tabla de Resultados")
+        frame_tabla = ttk.LabelFrame(self, text="  Tabla de Resultados  ")
         frame_tabla.pack(fill="both", expand=True, padx=10, pady=5)
 
         columnas = ("n", "x_n", "f(x_n)", "Error Abs", "Error Rel (%)")
@@ -73,7 +115,7 @@ class VentanaPrincipal(tk.Tk):
 
     def crear_panel_graficas(self):
         """Reserva el espacio inferior donde se incrustará matplotlib."""
-        self.frame_grafica = tk.LabelFrame(self, text="Visualización de Convergencia")
+        self.frame_grafica = ttk.LabelFrame(self, text="  Visualización de Convergencia  ")
         self.frame_grafica.pack(fill="both", expand=True, padx=10, pady=5)
 
         # 1. Crear la figura de matplotlib
