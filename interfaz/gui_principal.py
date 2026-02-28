@@ -1,7 +1,8 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 import numpy as np
 from interfaz.graficas import GraficadorDinamico
+from interfaz.mensajes import MensajePersonalizado
 from metodos.falsa_posicion import FalsaPosicion
 from metodos.biseccion import Biseccion
 
@@ -10,6 +11,50 @@ class VentanaPrincipal(tk.Tk):
     """
     Clase principal que construye y gestiona la Interfaz Gráfica de Usuario (GUI).
     """
+
+    METODOS_CONFIG = {
+        "Bisección": {
+            "func": "x**3 - x - 2",
+            "a": "1.0",
+            "b": "2.0",
+            "lbl_a": "Límite inferior (a):",
+            "lbl_b": "Límite superior (b):",
+            "show_b": True,
+            "can_compare": False
+        },
+        "Falsa Posición": {
+            "func": "x**3 - x - 2",
+            "a": "1.0",
+            "b": "2.0",
+            "lbl_a": "Límite inferior (a):",
+            "lbl_b": "Límite superior (b):",
+            "show_b": True,
+            "can_compare": False
+        },
+        "Punto Fijo": {
+            "func": "0.5 * np.cos(x) + 1.5",
+            "a": "1.0",
+            "lbl_a": "Punto inicial (x0):",
+            "show_b": False,
+            "can_compare": True
+        },
+        "Newton-Raphson": {
+            "func": "x**2 - 2",
+            "a": "1.5",
+            "lbl_a": "Punto inicial (x0):",
+            "show_b": False,
+            "can_compare": True
+        },
+        "Secante": {
+            "func": "x**2 - 2",
+            "a": "1.0",
+            "b": "2.0",
+            "lbl_a": "Punto inicial 0 (x0):",
+            "lbl_b": "Punto inicial 1 (x1):",
+            "show_b": True,
+            "can_compare": False
+        }
+    }
 
     TEMAS = {
         "Oscuro": {
@@ -112,7 +157,7 @@ class VentanaPrincipal(tk.Tk):
         
         self.combo_metodo = ttk.Combobox(self.sidebar, values=["Bisección", "Falsa Posición", "Punto Fijo", "Newton-Raphson", "Secante"], state="readonly")
         self.combo_metodo.pack(fill="x", **padding)
-        self.combo_metodo.current(2) # Punto Fijo por defecto como en la imagen
+        self.combo_metodo.bind("<<ComboboxSelected>>", self.actualizar_campos_metodo)
 
         # Panel de Parámetros
         self.frame_params = tk.LabelFrame(self.sidebar, text=" Parámetros de entrada ", bg=tema["bg_sidebar"], fg=tema["accent_blue"], font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
@@ -127,11 +172,14 @@ class VentanaPrincipal(tk.Tk):
         self.lbl_a = tk.Label(self.frame_params, text="Valor inicial (x0 / a):", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
         self.lbl_a.pack(anchor="w", padx=10)
         self.entry_a = tk.Entry(self.frame_params, bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], bd=0, highlightthickness=1, highlightbackground=tema["border_color"])
-        self.entry_a.insert(0, "1.0")
         self.entry_a.pack(fill="x", padx=10, pady=5)
 
+        self.lbl_b = tk.Label(self.frame_params, text="Límite superior (b):", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
+        self.entry_b = tk.Entry(self.frame_params, bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], bd=0, highlightthickness=1, highlightbackground=tema["border_color"])
+
         self.var_comparar = tk.BooleanVar(value=True)
-        ttk.Checkbutton(self.frame_params, text="Comparar x0 (0.5, 1.0, 1.5, 2.0)", variable=self.var_comparar).pack(anchor="w", padx=10, pady=5)
+        self.chk_comparar = ttk.Checkbutton(self.frame_params, text="Comparar x0 (0.5, 1.0, 1.5, 2.0)", variable=self.var_comparar)
+        self.chk_comparar.pack(anchor="w", padx=10, pady=5)
 
         self.lbl_tol = tk.Label(self.frame_params, text="Tolerancia:", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
         self.lbl_tol.pack(anchor="w", padx=10)
@@ -166,6 +214,40 @@ class VentanaPrincipal(tk.Tk):
         self.lbl_res_final = tk.Label(self.frame_res, text="Esperando cálculo...", bg=tema["bg_sidebar"], fg=tema["accent_green"], 
                                      font=("Consolas", 9, "bold"), justify="left", anchor="nw")
         self.lbl_res_final.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        self.combo_metodo.current(2)
+        self.actualizar_campos_metodo()
+
+    def actualizar_campos_metodo(self, event=None):
+        """Actualiza los valores por defecto y visibilidad de campos según el método."""
+        metodo = self.combo_metodo.get()
+        config = self.METODOS_CONFIG.get(metodo)
+        if not config: return
+
+        # Limpiar y establecer nuevos valores
+        self.entry_func.delete(0, tk.END)
+        self.entry_func.insert(0, config["func"])
+        
+        self.entry_a.delete(0, tk.END)
+        self.entry_a.insert(0, config["a"])
+        self.lbl_a.config(text=config["lbl_a"])
+
+        # Control de visibilidad para 'b'
+        if config["show_b"]:
+            self.lbl_b.pack(anchor="w", padx=10, after=self.entry_a)
+            self.entry_b.pack(fill="x", padx=10, pady=5, after=self.lbl_b)
+            self.entry_b.delete(0, tk.END)
+            self.entry_b.insert(0, config["b"])
+            self.lbl_b.config(text=config["lbl_b"])
+        else:
+            self.lbl_b.pack_forget()
+            self.entry_b.pack_forget()
+
+        # Control de comparación (solo para métodos de un punto)
+        if config["can_compare"]:
+            self.chk_comparar.pack(anchor="w", padx=10, pady=5, after=self.entry_b if config["show_b"] else self.entry_a)
+        else:
+            self.chk_comparar.pack_forget()
 
     def crear_main_content(self):
         """Panel derecho con gráficas arriba y tabla abajo."""
@@ -227,6 +309,8 @@ class VentanaPrincipal(tk.Tk):
         self.entry_func.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
         self.lbl_a.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
         self.entry_a.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
+        self.lbl_b.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
+        self.entry_b.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
         self.lbl_tol.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
         self.entry_tol.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
         self.lbl_max_iter.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
@@ -247,12 +331,13 @@ class VentanaPrincipal(tk.Tk):
             func(*args)
 
     def ejecutar_calculo(self):
-        """Ejecuta el cálculo manejando la comparación de x0 si está activa."""
+        """Ejecuta el cálculo manejando la comparación de x0 si está activa o intervalos según el método."""
         import time
         metodo_nombre = self.combo_metodo.get()
         func_str = self.entry_func.get()
         tol = float(self.entry_tol.get())
         max_iter = int(self.entry_max_iter.get())
+        config = self.METODOS_CONFIG.get(metodo_nombre)
         
         try:
             # Crear función segura usando numpy
@@ -260,73 +345,95 @@ class VentanaPrincipal(tk.Tk):
                 return eval(func_str, {"np": np, "math": np, "x": x})
 
             resultados = []
-            x0_list = [float(self.entry_a.get())]
-            if self.var_comparar.get():
-                x0_list = [0.5, 1.0, 1.5, 2.0]
-
+            
+            # Determinar puntos iniciales
+            if config["can_compare"] and self.var_comparar.get():
+                puntos_a = [0.5, 1.0, 1.5, 2.0]
+            else:
+                puntos_a = [float(self.entry_a.get())]
+            
             mejor_resultado = None
             min_iter = float('inf')
 
-            for x0 in x0_list:
+            for val_a in puntos_a:
                 start_t = time.perf_counter()
+                
                 if metodo_nombre == "Punto Fijo":
                     from metodos.punto_fijo import PuntoFijo
                     m = PuntoFijo(f_eval, tolerancia=tol, max_iter=max_iter)
-                    res = m.calcular(x0=x0)
+                    res = m.calcular(x0=val_a)
                 elif metodo_nombre == "Newton-Raphson":
                     from metodos.newton_raphson import NewtonRaphson
                     import sympy as sp
                     x_s = sp.Symbol('x')
-                    f_s = eval(func_str.replace("np.", "sp.").replace("math.", "sp."), {"sp": sp, "x": x_s})
-                    df_s = sp.diff(f_s, x_s)
-                    f_n = sp.lambdify(x_s, f_s, 'numpy')
-                    df_n = sp.lambdify(x_s, df_s, 'numpy')
+                    try:
+                        f_s = eval(func_str.replace("np.", "sp.").replace("math.", "sp."), {"sp": sp, "x": x_s})
+                        df_s = sp.diff(f_s, x_s)
+                        f_n = sp.lambdify(x_s, f_s, 'numpy')
+                        df_n = sp.lambdify(x_s, df_s, 'numpy')
+                    except:
+                        f_n = f_eval
+                        df_n = lambda x: (f_eval(x + 1e-7) - f_eval(x)) / 1e-7
+                    
                     m = NewtonRaphson(f_n, df_n, tolerancia=tol, max_iter=max_iter)
-                    res = m.calcular(x0=x0)
+                    res = m.calcular(x0=val_a)
                 elif metodo_nombre == "Bisección":
                     from metodos.biseccion import Biseccion
-                    # Bisección necesita un intervalo, si x0 es el inicio, usamos x0 + 1 como b por defecto si no hay b
+                    val_b = float(self.entry_b.get())
                     m = Biseccion(f_eval, tolerancia=tol, max_iter=max_iter)
-                    res = m.calcular(a=x0, b=x0 + 2) # Ajuste simple
+                    res = m.calcular(a=val_a, b=val_b)
+                elif metodo_nombre == "Falsa Posición":
+                    from metodos.falsa_posicion import FalsaPosicion
+                    val_b = float(self.entry_b.get())
+                    m = FalsaPosicion(f_eval, tolerancia=tol, max_iter=max_iter)
+                    res = m.calcular(a=val_a, b=val_b)
+                elif metodo_nombre == "Secante":
+                    from metodos.secante import Secante
+                    val_b = float(self.entry_b.get())
+                    m = Secante(f_eval, tolerancia=tol, max_iter=max_iter)
+                    res = m.calcular(x0=val_a, x1=val_b)
                 else:
-                    # Otros métodos...
-                    res = {'exito': False, 'mensaje': "No implementado para comparación"}
+                    res = {'exito': False, 'mensaje': "Método no reconocido"}
                 
                 end_t = time.perf_counter()
                 res['tiempo_ms'] = (end_t - start_t) * 1000
-                res['x0_inicial'] = x0
+                res['x0_inicial'] = val_a
                 resultados.append(res)
                 
                 if res['exito'] and res['iteraciones_totales'] < min_iter:
                     min_iter = res['iteraciones_totales']
                     mejor_resultado = res
 
-            # Llenar tabla con el primero o el mejor
+            if not mejor_resultado:
+                mejor_resultado = resultados[0]
+
             for item in self.tabla.get_children(): self.tabla.delete(item)
-            res_to_show = mejor_resultado if mejor_resultado else resultados[0]
-            for fila in res_to_show['historial']:
+            for fila in mejor_resultado.get('historial', []):
                 self.tabla.insert("", "end", values=(fila['n'], f"{fila['c']:.6f}", f"{fila['f(c)']:.6f}", f"{fila['error_absoluto']:.2e}", f"{fila['error_relativo']:.4f}"))
 
-            # Graficar
             historias = [r['historial'] for r in resultados if r['exito']]
             if historias:
-                data_graf = (metodo_nombre, f_eval, historias if self.var_comparar.get() else historias[0], res_to_show['raiz'])
+                if len(puntos_a) > 1:
+                    data_graf = (metodo_nombre, f_eval, historias, mejor_resultado['raiz'])
+                else:
+                    data_graf = (metodo_nombre, f_eval, historias[0], mejor_resultado['raiz'])
+                
                 self.ultimo_redibujado = (self.graficador.graficar_metodo, data_graf)
                 self.graficador.graficar_metodo(*data_graf)
 
-            # Mostrar resultado final en sidebar
-            if mejor_resultado:
-                txt = (f"🚀 MÁS RÁPIDO: x0 = {mejor_resultado['x0_inicial']}\n"
+            if mejor_resultado['exito']:
+                comp_txt = f"🚀 MÁS RÁPIDO: x0 = {mejor_resultado['x0_inicial']}\n" if len(puntos_a) > 1 else ""
+                txt = (f"{comp_txt}"
                        f"RAÍZ: {mejor_resultado['raiz']:.8f}\n"
                        f"ITERACIONES: {mejor_resultado['iteraciones_totales']}\n"
                        f"ERROR: {mejor_resultado['historial'][-1]['error_absoluto']:.2e}\n"
                        f"TIEMPO: {mejor_resultado['tiempo_ms']:.2f} ms")
                 self.lbl_res_final.config(text=txt)
             else:
-                self.lbl_res_final.config(text="No hubo convergencia.")
+                self.lbl_res_final.config(text=f"Error: {mejor_resultado.get('mensaje', 'No convergió')}")
 
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            MensajePersonalizado.showerror(self, "Error", str(e), tema=self.tema_actual)
 
     def ejecutar_comparacion(self):
         """Ejecuta ambos métodos simultáneamente para el análisis del Ejercicio 2."""
@@ -348,7 +455,7 @@ class VentanaPrincipal(tk.Tk):
                 f"Bisección:\nRaíz: {res_bis['raiz']:.8f} | Iteraciones: {res_bis['iteraciones_totales']}\n\n"
                 f"Falsa Posición:\nRaíz: {res_fp['raiz']:.8f} | Iteraciones: {res_fp['iteraciones_totales']}"
             )
-            messagebox.showinfo("Comparación Completada", mensaje)
+            MensajePersonalizado.showinfo(self, "Comparación Completada", mensaje, tema=self.tema_actual)
 
             # Llamamos a la función que dibujará la gráfica superpuesta
             data_graf = ("Bisección vs Falsa Posición", res_bis['historial'], "Bisección", res_fp['historial'], "Falsa Posición")
@@ -356,7 +463,7 @@ class VentanaPrincipal(tk.Tk):
             self.graficador.graficar_comparacion(*data_graf)
 
         except Exception as e:
-            messagebox.showerror("Error", f"Error en la comparación: {str(e)}")
+            MensajePersonalizado.showerror(self, "Error", f"Error en la comparación: {str(e)}", tema=self.tema_actual)
 
 
     def ejecutar_comparacion_ej5(self):
@@ -413,7 +520,7 @@ class VentanaPrincipal(tk.Tk):
                 "de calcular derivadas analíticas para este problema."
             )
 
-            messagebox.showinfo("Análisis de Escalabilidad (Ejercicio 5)", mensaje)
+            MensajePersonalizado.showinfo(self, "Análisis de Escalabilidad (Ejercicio 5)", mensaje, tema=self.tema_actual)
 
             # Graficamos la comparación de convergencia
             data_graf = ("Secante vs Newton-Raphson", res_sec['historial'], "Secante", res_nr['historial'], "Newton-Raphson")
@@ -421,4 +528,4 @@ class VentanaPrincipal(tk.Tk):
             self.graficador.graficar_comparacion(*data_graf)
 
         except Exception as e:
-            messagebox.showerror("Error", f"Error en la comparación: {str(e)}")
+            MensajePersonalizado.showerror(self, "Error", f"Error en la comparación: {str(e)}", tema=self.tema_actual)
