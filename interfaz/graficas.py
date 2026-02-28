@@ -19,29 +19,30 @@ class GraficadorDinamico:
         """
         self.frame = frame_contenedor
         
-        # Configuración de la figura con fondo oscuro según especificaciones
-        self.figura = Figure(figsize=(10, 5), dpi=100, facecolor='#12121e')
+        # Configuración de la figura con fondo extra oscuro estilo imagen
+        self.figura = Figure(figsize=(10, 8), dpi=100, facecolor='#0b0b14')
         
-        # Subplot 1: Panel de Función
-        self.ax1 = self.figura.add_subplot(121)
-        self.ax1.set_facecolor('#12121e')
-        self.ax1.tick_params(colors='white')
+        # Subplot 1: Panel de Función (Arriba)
+        self.ax1 = self.figura.add_subplot(211)
+        self.ax1.set_facecolor('#0b0b14')
+        self.ax1.tick_params(colors='white', labelsize=9)
         for spine in self.ax1.spines.values():
-            spine.set_color('white')
+            spine.set_color('#333333')
             
-        # Subplot 2: Panel de Convergencia
-        self.ax2 = self.figura.add_subplot(122)
-        self.ax2.set_facecolor('#12121e')
-        self.ax2.tick_params(colors='white')
+        # Subplot 2: Panel de Convergencia (Abajo)
+        self.ax2 = self.figura.add_subplot(212)
+        self.ax2.set_facecolor('#0b0b14')
+        self.ax2.tick_params(colors='white', labelsize=9)
         for spine in self.ax2.spines.values():
-            spine.set_color('white')
+            spine.set_color('#333333')
         
-        self.figura.tight_layout(pad=3.0)
+        self.figura.tight_layout(pad=4.0)
         
         # Integración con Tkinter
         self.canvas = FigureCanvasTkAgg(self.figura, master=self.frame)
         self.widget = self.canvas.get_tk_widget()
         self.widget.pack(fill="both", expand=True)
+        self.widget.configure(bg='#0b0b14')
         
         # Tooltip para hover
         self.tooltip = None
@@ -50,83 +51,111 @@ class GraficadorDinamico:
         self.canvas.mpl_connect("scroll_event", self.on_zoom)
         self.canvas.mpl_connect("motion_notify_event", self.on_hover)
         
-        self.datos_puntos = [] # Para almacenar puntos y permitir el hover
+        self.datos_puntos_ax2 = [] # Puntos para ax2
+        self.curva_ax1 = None # Guardar referencia a la curva principal para hover
 
     def limpiar(self):
         """Limpia ambos paneles para un nuevo gráfico."""
         self.ax1.clear()
         self.ax2.clear()
-        self.ax1.set_facecolor('#12121e')
-        self.ax2.set_facecolor('#12121e')
-        self.datos_puntos = []
+        self.ax1.set_facecolor('#0b0b14')
+        self.ax2.set_facecolor('#0b0b14')
+        self.datos_puntos_ax2 = []
+        self.curva_ax1 = None
         if self.tooltip:
-            self.tooltip.remove()
+            try:
+                self.tooltip.remove()
+            except:
+                pass
             self.tooltip = None
 
     def graficar_metodo(self, metodo_nombre, funcion, historial, raiz, extra_params=None):
         """
         Grafica los resultados de un método específico.
+        Permite recibir una lista de historiales para comparación si es necesario.
         """
         self.limpiar()
+        colores_multi = ['#66ffff', '#55ff55', '#ffaa00', '#aa66ff']
         
         # 1. Graficar en ax1 (Panel de Función)
-        self.ax1.set_title(f"Visualización: {metodo_nombre}", color='white')
+        self.ax1.set_title(f"Convergencia - {metodo_nombre}", color='white', fontweight='bold', pad=15)
         
         # Determinar rango dinámico
-        if not historial:
-            x_vals_hist = [raiz]
+        todas_x = []
+        if isinstance(historial, list) and len(historial) > 0 and isinstance(historial[0], list):
+            # Caso comparación de múltiples historiales
+            for h_list in historial:
+                for h in h_list:
+                    if 'c' in h: todas_x.append(h['c'])
+                    elif 'x_n' in h: todas_x.append(h['x_n'])
+            es_comparacion = True
         else:
-            # Dependiendo del método las llaves cambian, intentamos estandarizar o manejar casos
-            x_vals_hist = []
+            # Caso simple
             for h in historial:
-                if 'c' in h: x_vals_hist.append(h['c'])
-                elif 'x_n' in h: x_vals_hist.append(h['x_n'])
+                if 'c' in h: todas_x.append(h['c'])
+                elif 'x_n' in h: todas_x.append(h['x_n'])
+            es_comparacion = False
             
-        min_x = min(x_vals_hist + [raiz]) - 1.0
-        max_x = max(x_vals_hist + [raiz]) + 1.0
+        if not todas_x: todas_x = [raiz]
+            
+        min_x = min(todas_x + [raiz]) - 0.5
+        max_x = max(todas_x + [raiz]) + 0.5
         
         x = np.linspace(min_x, max_x, 500)
         y = [funcion(val) for val in x]
         
-        # Línea principal celeste (#6699ff)
-        self.ax1.plot(x, y, color='#6699ff', linewidth=2, label='f(x)')
+        # Guardar referencia para hover
+        self.curva_ax1, = self.ax1.plot(x, y, color='#6699ff', linewidth=2, label='f(x)' if metodo_nombre != "Punto Fijo" else 'y = g(x)')
+        self.ax1.fill_between(x, y, 0, color='#6699ff', alpha=0.05)
         
-        # Efecto de transparencia: Relleno suave bajo la curva (Glassy look)
-        self.ax1.fill_between(x, y, 0, color='#6699ff', alpha=0.1)
-        
-        self.ax1.axhline(0, color='white', linewidth=0.8, linestyle='--')
-        
-        # Marcar la raíz con estrella roja (#ff5555)
-        self.ax1.plot(raiz, funcion(raiz), '*', color='#ff5555', markersize=12, label='Raíz')
-        
-        # Visualizaciones específicas
         if metodo_nombre == "Punto Fijo":
-            self._graficar_cobweb(funcion, historial)
-        elif metodo_nombre == "Newton-Raphson":
-            self._graficar_tangentes(funcion, historial, extra_params)
-        elif metodo_nombre == "Secante":
-            self._graficar_secantes(funcion, historial)
-            
-        self.ax1.legend()
-        self.ax1.grid(True, alpha=0.2)
+            self.ax1.plot(x, x, color='white', linestyle='--', alpha=0.4, label='y = x')
 
-        # 2. Graficar en ax2 (Panel de Convergencia)
-        self.ax2.set_title("Convergencia del Error", color='white')
-        self.ax2.set_xlabel("Iteración", color='white')
-        self.ax2.set_ylabel("Error Absoluto", color='white')
+        self.ax1.axhline(0, color='#555555', linewidth=0.8)
         
-        iteraciones = [h['n'] for h in historial]
-        errores = [h['error_absoluto'] for h in historial]
+        # Dibujar puntos de convergencia
+        if es_comparacion:
+            self.datos_puntos_ax2 = []
+            for idx, h_list in enumerate(historial):
+                label_x0 = f"x0={h_list[0].get('c', h_list[0].get('x_n-1', 'x'))}" if h_list else "x0"
+                color = colores_multi[idx % len(colores_multi)]
+                
+                # Puntos en ax1
+                puntos_x = [h.get('c', h.get('x_n', 0)) for h in h_list]
+                puntos_y = [funcion(px) for px in puntos_x]
+                self.ax1.plot(puntos_x, puntos_y, 'o', color=color, markersize=5, alpha=0.7, label=label_x0)
+                
+                # Líneas en ax2
+                it = [h['n'] for h in h_list]
+                err = [h['error_absoluto'] for h in h_list]
+                self.ax2.semilogy(it, err, 's-', color=color, markersize=4, label=label_x0, linewidth=1.5)
+                self.datos_puntos_ax2.append((it, err, label_x0, color))
+        else:
+            # Caso simple
+            puntos_x = [h.get('c', h.get('x_n', 0)) for h in historial]
+            puntos_y = [funcion(px) for px in puntos_x]
+            self.ax1.plot(puntos_x, puntos_y, 'o', color='#ffaa00', markersize=5, alpha=0.8)
+            
+            # ax2 simple
+            it = [h['n'] for h in historial]
+            err = [h['error_absoluto'] for h in historial]
+            self.ax2.semilogy(it, err, 'o-', color='#6699ff', markersize=4)
+            self.ax2.fill_between(it, err, 1e-20, color='#6699ff', alpha=0.1)
+            self.datos_puntos_ax2 = [(it, err, "Error", '#6699ff')]
+
+        # Raíz estrella roja
+        self.ax1.plot(raiz, funcion(raiz), '*', color='#ff5555', markersize=15, label=f'Raíz: {raiz:.6f}', zorder=5)
         
-        self.ax2.semilogy(iteraciones, errores, 'o-', color='#6699ff', markersize=4)
-        
-        # Efecto de transparencia en convergencia: Relleno entre el error y un valor mínimo (para escala log)
-        self.ax2.fill_between(iteraciones, errores, 1e-25, color='#6699ff', alpha=0.1)
-        
-        self.ax2.grid(True, which="both", ls="-", alpha=0.1) # Rejilla más sutil
-        
-        # Guardar datos para hover
-        self.datos_puntos = list(zip(iteraciones, errores))
+        self.ax1.legend(facecolor='#0b0b14', edgecolor='#333333', labelcolor='white', fontsize=8)
+        self.ax1.grid(True, alpha=0.1)
+
+        # Config ax2
+        self.ax2.set_title("Convergencia del Error Absoluto (escala log)", color='white', fontweight='bold', fontsize=10)
+        self.ax2.set_xlabel("Iteración n", color='white', fontsize=9)
+        self.ax2.set_ylabel("Error absoluto", color='white', fontsize=9)
+        self.ax2.grid(True, which="both", ls="-", alpha=0.05)
+        if es_comparacion:
+            self.ax2.legend(facecolor='#0b0b14', edgecolor='#333333', labelcolor='white', fontsize=8)
         
         self.canvas.draw()
 
@@ -239,26 +268,45 @@ class GraficadorDinamico:
             self.canvas.draw()
 
     def on_hover(self, event):
-        """Muestra un tooltip al pasar el mouse por los puntos de convergencia."""
+        """Muestra un tooltip al pasar el mouse por los puntos de convergencia o la curva principal."""
+        if not event.inaxes:
+            if self.tooltip:
+                try: self.tooltip.remove()
+                except: pass
+                self.tooltip = None
+                self.canvas.draw_idle()
+            return
+
         if event.inaxes == self.ax2:
-            for it, err in self.datos_puntos:
-                # Distancia simple para detectar proximidad
-                if abs(event.xdata - it) < 0.5 and abs(np.log10(event.ydata) - np.log10(err)) < 0.5:
-                    if self.tooltip:
-                        self.tooltip.remove()
-                    self.tooltip = self.ax2.annotate(
-                        f"Iter: {it}\nError: {err:.2e}",
-                        xy=(it, err),
-                        xytext=(10, 10),
-                        textcoords="offset points",
-                        bbox=dict(boxstyle="round", fc="#2b2b2b", ec="#cc7832", alpha=0.7),
-                        color="white",
-                        arrowprops=dict(arrowstyle="->", color="#cc7832")
-                    )
-                    self.canvas.draw()
-                    return
+            # Hover en gráfica de convergencia
+            for data in self.datos_puntos_ax2:
+                it_list, err_list, label, color = data
+                for it, err in zip(it_list, err_list):
+                    if abs(event.xdata - it) < 0.5 and abs(np.log10(event.ydata) - np.log10(err)) < 0.3:
+                        if self.tooltip: self.tooltip.remove()
+                        self.tooltip = self.ax2.annotate(
+                            f"{label}\nIter: {it}\nError: {err:.2e}",
+                            xy=(it, err), xytext=(15, 15), textcoords="offset points",
+                            bbox=dict(boxstyle="round", fc="#0b0b14", ec=color, alpha=0.9),
+                            color="white", fontsize=8, arrowprops=dict(arrowstyle="->", color=color)
+                        )
+                        self.canvas.draw_idle()
+                        return
         
+        elif event.inaxes == self.ax1:
+            # Hover en gráfica principal (mostrar coordenadas dinámicas)
+            if event.xdata is not None and event.ydata is not None:
+                if self.tooltip: self.tooltip.remove()
+                self.tooltip = self.ax1.annotate(
+                    f"x = {event.xdata:.4f}\ny = {event.ydata:.4f}",
+                    xy=(event.xdata, event.ydata), xytext=(15, 15), textcoords="offset points",
+                    bbox=dict(boxstyle="round", fc="#0b0b14", ec="#6699ff", alpha=0.9),
+                    color="white", fontsize=8, arrowprops=dict(arrowstyle="->", color="#6699ff")
+                )
+                self.canvas.draw_idle()
+                return
+
         if self.tooltip:
             self.tooltip.remove()
             self.tooltip = None
-            self.canvas.draw()
+            self.canvas.draw_idle()
