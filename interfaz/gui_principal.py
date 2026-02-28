@@ -13,215 +13,226 @@ class VentanaPrincipal(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.title("Resolución de Ecuaciones No Lineales - Alexander von Humboldt")
-        self.geometry("1050x750")
-        self.configure(bg="#f4f5f7") # Un fondo gris claro muy moderno
+        self.title("Métodos Numéricos - Ingeniería de Software")
+        self.geometry("1200x850")
+        self.configure(bg="#0b0b14")
 
-        self.configurar_estilos() # <--- Añade esta línea
+        # --- EFECTOS DE TRANSPARENCIA ---
+        self.attributes('-alpha', 0.0)
+        self.aparecer_paulatinamente()
+        # ---------------------------------
 
-        # Inicialización de la estructura visual principal
-        self.crear_panel_entrada()
-        self.crear_tabla_resultados()
-        self.crear_panel_graficas()
+        self.configurar_estilos()
+
+        # Layout principal: Sidebar y Contenido
+        self.sidebar = tk.Frame(self, bg="#12121e", width=280)
+        self.sidebar.pack(side="left", fill="y")
+        self.sidebar.pack_propagate(False)
+
+        self.contenedor_principal = tk.Frame(self, bg="#0b0b14")
+        self.contenedor_principal.pack(side="right", fill="both", expand=True)
+
+        self.crear_sidebar_content()
+        self.crear_main_content()
 
     def configurar_estilos(self):
-        """Aplica un tema oscuro nativo (Dark Mode) usando ttk."""
-        self.configure(bg="#2b2b2b")  # Fondo principal oscuro de la ventana
+        """Aplica un tema oscuro premium estilo imagen."""
         self.estilo = ttk.Style()
-
-        # Usamos 'clam' como lienzo en blanco porque es el más personalizable
         if 'clam' in self.estilo.theme_names():
             self.estilo.theme_use('clam')
 
-        # Paleta de colores estilo IDE profesional
-        bg_color = "#3c3f41"
-        fg_color = "#a9b7c6"
-        btn_color = "#4b6eaf"
-        acento = "#cc7832"  # Un tono naranja para resaltar
+        bg_dark = "#12121e"
+        accent_blue = "#3a5aff"
+        accent_green = "#00ff88"
+        text_white = "#ffffff"
+        text_gray = "#a9b7c6"
 
-        # Estilo de textos y botones
-        self.estilo.configure("TLabel", font=("Segoe UI", 10), background=bg_color, foreground=fg_color)
-        self.estilo.configure("TButton", font=("Segoe UI", 10, "bold"), background=btn_color, foreground="white",
-                              padding=6)
-        self.estilo.map("TButton", background=[('active', '#365880')])  # Brillo al pasar el mouse
+        self.estilo.configure("TLabel", font=("Segoe UI", 10), background=bg_dark, foreground=text_white)
+        self.estilo.configure("Sidebar.TLabel", font=("Segoe UI", 9, "bold"), background=bg_dark, foreground=text_gray)
+        
+        # Botones personalizados
+        self.estilo.configure("Calcular.TButton", font=("Segoe UI", 10, "bold"), background=accent_blue, foreground="white")
+        self.estilo.map("Calcular.TButton", background=[('active', '#2d4acc')])
+        
+        self.estilo.configure("Limpiar.TButton", font=("Segoe UI", 10, "bold"), background="#333333", foreground="white")
+        self.estilo.map("Limpiar.TButton", background=[('active', '#444444')])
 
-        # Estilo de los contenedores
-        self.estilo.configure("TLabelframe", background=bg_color, foreground=fg_color, bordercolor="#555555")
-        self.estilo.configure("TLabelframe.Label", font=("Segoe UI", 11, "bold"), background=bg_color,
-                              foreground=acento)
+        self.estilo.configure("Treeview", font=("Consolas", 9), rowheight=25, background="#0b0b14", 
+                              fieldbackground="#0b0b14", foreground=text_gray)
+        self.estilo.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"), background="#1a1a2e", foreground=accent_blue)
 
-        # Estilo de la tabla de resultados
-        self.estilo.configure("Treeview",
-                              font=("Consolas", 10),
-                              rowheight=25,
-                              background="#2b2b2b",
-                              fieldbackground="#2b2b2b",
-                              foreground=fg_color)
+        self.estilo.configure("TCheckbutton", background=bg_dark, foreground=text_white, font=("Segoe UI", 9))
 
-        self.estilo.configure("Treeview.Heading",
-                              font=("Segoe UI", 10, "bold"),
-                              background="#323232",
-                              foreground=acento)
+    def crear_sidebar_content(self):
+        """Construye el contenido de la barra lateral izquierda."""
+        padding = {"padx": 20, "pady": 5}
+        
+        # Título del software
+        tk.Label(self.sidebar, text="Seleccione el Método / Ejercicio:", bg="#12121e", fg="white", 
+                 font=("Segoe UI", 10, "bold")).pack(anchor="w", **padding, pady=(20, 5))
+        
+        self.combo_metodo = ttk.Combobox(self.sidebar, values=["Bisección", "Falsa Posición", "Punto Fijo", "Newton-Raphson", "Secante"], state="readonly")
+        self.combo_metodo.pack(fill="x", **padding)
+        self.combo_metodo.current(2) # Punto Fijo por defecto como en la imagen
 
-    def crear_panel_entrada(self):
-        """Construye el panel superior para los parámetros de entrada del usuario."""
-        frame_inputs = ttk.LabelFrame(self, text="  Parámetros de Entrada  ")
-        frame_inputs.pack(fill="x", padx=10, pady=5)
+        # Panel de Parámetros
+        frame_params = tk.LabelFrame(self.sidebar, text=" Parámetros de entrada ", bg="#12121e", fg="#3a5aff", font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
+        frame_params.pack(fill="x", **padding, pady=15)
 
-        # Selección del método
-        tk.Label(frame_inputs, text="Método:").grid(row=0, column=0, padx=5, pady=5)
-        self.combo_metodo = ttk.Combobox(
-            frame_inputs,
-            values=["Bisección", "Falsa Posición", "Punto Fijo", "Newton-Raphson", "Secante"],
-            width=15
-        )
-        self.combo_metodo.grid(row=0, column=1, padx=5, pady=5)
-        self.combo_metodo.current(1)
+        tk.Label(frame_params, text="Función f(x) / g(x):", bg="#12121e", fg="#a9b7c6", font=("Segoe UI", 8)).pack(anchor="w", padx=10, pady=(10, 0))
+        self.entry_func = tk.Entry(frame_params, bg="#1a1a2e", fg="white", insertbackground="white", bd=0, highlightthickness=1, highlightbackground="#333333")
+        self.entry_func.insert(0, "0.5 * np.cos(x) + 1.5")
+        self.entry_func.pack(fill="x", padx=10, pady=5)
 
-        # Campo para a (o x0 para Punto Fijo/Newton)
-        tk.Label(frame_inputs, text="Valor Inicial (a / x0):").grid(row=0, column=2, padx=5, pady=5)
-        self.entry_a = tk.Entry(frame_inputs, width=8)
-        self.entry_a.insert(0, "2.0")  # Valor por defecto
-        self.entry_a.grid(row=0, column=3, padx=5, pady=5)
+        tk.Label(frame_params, text="Valor inicial (x0 / a):", bg="#12121e", fg="#a9b7c6", font=("Segoe UI", 8)).pack(anchor="w", padx=10)
+        self.entry_a = tk.Entry(frame_params, bg="#1a1a2e", fg="white", insertbackground="white", bd=0, highlightthickness=1, highlightbackground="#333333")
+        self.entry_a.insert(0, "1.0")
+        self.entry_a.pack(fill="x", padx=10, pady=5)
 
-        # Campo para b
-        tk.Label(frame_inputs, text="Valor Final (b):").grid(row=0, column=4, padx=5, pady=5)
-        self.entry_b = tk.Entry(frame_inputs, width=8)
-        self.entry_b.insert(0, "4.0")  # Valor por defecto
-        self.entry_b.grid(row=0, column=5, padx=5, pady=5)
+        self.var_comparar = tk.BooleanVar(value=True)
+        ttk.Checkbutton(frame_params, text="Comparar x0 (0.5, 1.0, 1.5, 2.0)", variable=self.var_comparar).pack(anchor="w", padx=10, pady=5)
+
+        tk.Label(frame_params, text="Tolerancia:", bg="#12121e", fg="#a9b7c6", font=("Segoe UI", 8)).pack(anchor="w", padx=10)
+        self.entry_tol = tk.Entry(frame_params, bg="#1a1a2e", fg="white", insertbackground="white", bd=0, highlightthickness=1, highlightbackground="#333333")
+        self.entry_tol.insert(0, "1e-8")
+        self.entry_tol.pack(fill="x", padx=10, pady=5)
+
+        tk.Label(frame_params, text="Máx. Iteraciones:", bg="#12121e", fg="#a9b7c6", font=("Segoe UI", 8)).pack(anchor="w", padx=10)
+        self.entry_max_iter = tk.Entry(frame_params, bg="#1a1a2e", fg="white", insertbackground="white", bd=0, highlightthickness=1, highlightbackground="#333333")
+        self.entry_max_iter.insert(0, "100")
+        self.entry_max_iter.pack(fill="x", padx=10, pady=(5, 15))
+
+        # Checkboxes de visualización
+        self.var_grafica = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self.sidebar, text="Mostrar Gráfica Principal", variable=self.var_grafica).pack(anchor="w", **padding)
+        self.var_conv = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self.sidebar, text="Mostrar Convergencia (Log)", variable=self.var_conv).pack(anchor="w", **padding)
+        self.var_tabla = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self.sidebar, text="Mostrar Tabla", variable=self.var_tabla).pack(anchor="w", **padding)
 
         # Botones
-        tk.Button(frame_inputs, text="Calcular", command=self.ejecutar_calculo).grid(row=0, column=6, padx=5, pady=5)
-        tk.Button(frame_inputs, text="Comparar Bis vs FP", command=self.ejecutar_comparacion, bg="lightblue").grid(
-            row=0, column=7, padx=5, pady=5)
-        # Botón especial para el Ejercicio 5
-        tk.Button(frame_inputs, text="Comparar Secante vs NR",
-                  command=self.ejecutar_comparacion_ej5, bg="lightgreen").grid(row=0, column=8, padx=5, pady=5)
+        frame_btns = tk.Frame(self.sidebar, bg="#12121e")
+        frame_btns.pack(fill="x", **padding, pady=20)
+        ttk.Button(frame_btns, text="▶ Calcular", style="Calcular.TButton", command=self.ejecutar_calculo).pack(side="left", expand=True, fill="x", padx=(0, 5))
+        ttk.Button(frame_btns, text="Limpiar", style="Limpiar.TButton", command=self.limpiar_todo).pack(side="left", expand=True, fill="x")
 
-    def crear_tabla_resultados(self):
-        """Configura el componente Treeview para mostrar el historial de iteraciones."""
-        frame_tabla = ttk.LabelFrame(self, text="  Tabla de Resultados  ")
-        frame_tabla.pack(fill="both", expand=True, padx=10, pady=5)
+        # Resultado Final
+        self.frame_res = tk.LabelFrame(self.sidebar, text=" Resultado Final ", bg="#12121e", fg="#00ff88", font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
+        self.frame_res.pack(fill="both", expand=True, **padding, pady=(0, 20))
+        
+        self.lbl_res_final = tk.Label(self.frame_res, text="Esperando cálculo...", bg="#12121e", fg="#00ff88", 
+                                     font=("Consolas", 9, "bold"), justify="left", anchor="nw")
+        self.lbl_res_final.pack(fill="both", expand=True, padx=10, pady=10)
 
-        columnas = ("n", "x_n", "f(x_n)", "Error Abs", "Error Rel (%)")
-        self.tabla = ttk.Treeview(frame_tabla, columns=columnas, show="headings")
-
-        for col in columnas:
-            self.tabla.heading(col, text=col)
-            self.tabla.column(col, width=150, anchor="center")
-
-        self.tabla.pack(fill="both", expand=True, padx=5, pady=5)
-
-    def crear_panel_graficas(self):
-        """Inicializa el graficador dinámico en el panel inferior."""
-        self.frame_grafica = ttk.LabelFrame(self, text="  Visualización Dinámica y Convergencia  ")
+    def crear_main_content(self):
+        """Panel derecho con gráficas arriba y tabla abajo."""
+        # Contenedor de gráficas
+        self.frame_grafica = tk.Frame(self.contenedor_principal, bg="#0b0b14")
         self.frame_grafica.pack(fill="both", expand=True, padx=10, pady=5)
-
-        # Usar la nueva clase de graficación
         self.graficador = GraficadorDinamico(self.frame_grafica)
 
+        # Contenedor de tabla
+        self.frame_tabla_container = tk.Frame(self.contenedor_principal, bg="#0b0b14", height=250)
+        self.frame_tabla_container.pack(fill="x", side="bottom", padx=10, pady=10)
+        self.frame_tabla_container.pack_propagate(False)
+
+        columnas = ("n", "x_n", "f(x_n)", "Error Abs", "Error Rel (%)")
+        self.tabla = ttk.Treeview(self.frame_tabla_container, columns=columnas, show="headings")
+        for col in columnas:
+            self.tabla.heading(col, text=col)
+            self.tabla.column(col, width=100, anchor="center")
+        
+        # Scrollbar para la tabla
+        scrolly = ttk.Scrollbar(self.frame_tabla_container, orient="vertical", command=self.tabla.yview)
+        self.tabla.configure(yscrollcommand=scrolly.set)
+        scrolly.pack(side="right", fill="y")
+        self.tabla.pack(fill="both", expand=True)
+
+    def limpiar_todo(self):
+        self.graficador.limpiar()
+        for item in self.tabla.get_children():
+            self.tabla.delete(item)
+        self.lbl_res_final.config(text="Esperando cálculo...")
 
     def ejecutar_calculo(self):
-        """Callback que ejecuta la lógica matemática y actualiza la vista polimórficamente."""
-        seleccion = self.combo_metodo.get()
-        import math
-
+        """Ejecuta el cálculo manejando la comparación de x0 si está activa."""
+        import time
+        metodo_nombre = self.combo_metodo.get()
+        func_str = self.entry_func.get()
+        tol = float(self.entry_tol.get())
+        max_iter = int(self.entry_max_iter.get())
+        
         try:
-            # Capturamos los valores de los cuadros de texto
-            val_a = float(self.entry_a.get())
-            val_b = float(self.entry_b.get())
+            # Crear función segura usando numpy
+            def f_eval(x):
+                return eval(func_str, {"np": np, "math": np, "x": x})
 
-            # Polimorfismo y configuración...
-            if seleccion == "Bisección":
-                def E(x):
-                    return x ** 3 - 6 * x ** 2 + 11 * x - 6.5
+            resultados = []
+            x0_list = [float(self.entry_a.get())]
+            if self.var_comparar.get():
+                x0_list = [0.5, 1.0, 1.5, 2.0]
 
-                metodo = Biseccion(funcion=E, tolerancia=1e-7)
-                resultado = metodo.calcular(a=val_a, b=val_b)  # Usamos las variables aquí
-                funcion_graficar = E
+            mejor_resultado = None
+            min_iter = float('inf')
 
-            elif seleccion == "Falsa Posición":
-                def E(x):
-                    return x ** 3 - 6 * x ** 2 + 11 * x - 6.5
+            for x0 in x0_list:
+                start_t = time.perf_counter()
+                if metodo_nombre == "Punto Fijo":
+                    from metodos.punto_fijo import PuntoFijo
+                    m = PuntoFijo(f_eval, tolerancia=tol, max_iter=max_iter)
+                    res = m.calcular(x0=x0)
+                elif metodo_nombre == "Newton-Raphson":
+                    from metodos.newton_raphson import NewtonRaphson
+                    import sympy as sp
+                    x_s = sp.Symbol('x')
+                    f_s = eval(func_str.replace("np.", "sp.").replace("math.", "sp."), {"sp": sp, "x": x_s})
+                    df_s = sp.diff(f_s, x_s)
+                    f_n = sp.lambdify(x_s, f_s, 'numpy')
+                    df_n = sp.lambdify(x_s, df_s, 'numpy')
+                    m = NewtonRaphson(f_n, df_n, tolerancia=tol, max_iter=max_iter)
+                    res = m.calcular(x0=x0)
+                elif metodo_nombre == "Bisección":
+                    from metodos.biseccion import Biseccion
+                    # Bisección necesita un intervalo, si x0 es el inicio, usamos x0 + 1 como b por defecto si no hay b
+                    m = Biseccion(f_eval, tolerancia=tol, max_iter=max_iter)
+                    res = m.calcular(a=x0, b=x0 + 2) # Ajuste simple
+                else:
+                    # Otros métodos...
+                    res = {'exito': False, 'mensaje': "No implementado para comparación"}
+                
+                end_t = time.perf_counter()
+                res['tiempo_ms'] = (end_t - start_t) * 1000
+                res['x0_inicial'] = x0
+                resultados.append(res)
+                
+                if res['exito'] and res['iteraciones_totales'] < min_iter:
+                    min_iter = res['iteraciones_totales']
+                    mejor_resultado = res
 
-                metodo = FalsaPosicion(funcion=E, tolerancia=1e-7)
-                resultado = metodo.calcular(a=val_a, b=val_b)  # Y aquí
-                funcion_graficar = E
+            # Llenar tabla con el primero o el mejor
+            for item in self.tabla.get_children(): self.tabla.delete(item)
+            res_to_show = mejor_resultado if mejor_resultado else resultados[0]
+            for fila in res_to_show['historial']:
+                self.tabla.insert("", "end", values=(fila['n'], f"{fila['c']:.6f}", f"{fila['f(c)']:.6f}", f"{fila['error_absoluto']:.2e}", f"{fila['error_relativo']:.4f}"))
 
-            elif seleccion == "Punto Fijo":
-                from metodos.punto_fijo import PuntoFijo
-                def g(x):
-                    return 0.5 * math.cos(x) + 1.5
+            # Graficar
+            historias = [r['historial'] for r in resultados if r['exito']]
+            if historias:
+                self.graficador.graficar_metodo(metodo_nombre, f_eval, historias if self.var_comparar.get() else historias[0], res_to_show['raiz'])
 
-                metodo = PuntoFijo(funcion_g=g, tolerancia=1e-8)
-                # Para Punto Fijo solo necesitamos x0, que lo leemos del primer cuadro (val_a)
-                resultado = metodo.calcular(x0=val_a)
-                funcion_graficar = g
-
-            elif seleccion == "Newton-Raphson":
-                from metodos.newton_raphson import NewtonRaphson
-                import sympy as sp
-
-                # 1. Definimos la variable y la función de concurrencia simbólicamente
-                x_sym = sp.Symbol('x')
-                T_sym = x_sym ** 3 - 8 * x_sym ** 2 + 20 * x_sym - 16
-
-                # 2. SymPy calcula la derivada exacta automáticamente
-                dT_sym = sp.diff(T_sym, x_sym)
-
-                # 3. Convertimos (lambdify) las fórmulas simbólicas a funciones de Python ejecutables por NumPy
-                T_func = sp.lambdify(x_sym, T_sym, 'numpy')
-                dT_func = sp.lambdify(x_sym, dT_sym, 'numpy')
-
-                # 4. Instanciamos nuestra clase inyectando ambas funciones
-                metodo = NewtonRaphson(funcion=T_func, derivada=dT_func, tolerancia=1e-10)
-                resultado = metodo.calcular(x0=val_a)
-                funcion_graficar = T_func
-                # ... (código anterior de Newton-Raphson) ...
-            elif seleccion == "Secante":
-                from metodos.secante import Secante
-                import numpy as np
-
-                # Función financiera P(x)
-                def P(x):
-                    return x * np.exp(-x / 2) - 0.3
-
-                # Instanciamos la clase de la Secante
-                metodo = Secante(funcion=P, tolerancia=1e-9)
-
-                # OJO: La secante requiere dos valores iniciales (val_a = 0.5, val_b = 1.0)
-                resultado = metodo.calcular(x0=val_a, x1=val_b)
-                funcion_graficar = P
-
-
+            # Mostrar resultado final en sidebar
+            if mejor_resultado:
+                txt = (f"🚀 MÁS RÁPIDO: x0 = {mejor_resultado['x0_inicial']}\n"
+                       f"RAÍZ: {mejor_resultado['raiz']:.8f}\n"
+                       f"ITERACIONES: {mejor_resultado['iteraciones_totales']}\n"
+                       f"ERROR: {mejor_resultado['historial'][-1]['error_absoluto']:.2e}\n"
+                       f"TIEMPO: {mejor_resultado['tiempo_ms']:.2f} ms")
+                self.lbl_res_final.config(text=txt)
             else:
-                messagebox.showinfo("En desarrollo", f"El método {seleccion} se implementará pronto.")
-                return
-
-            # Limpiamos datos anteriores de la tabla
-            for item in self.tabla.get_children():
-                self.tabla.delete(item)
-
-            # Llenamos la tabla
-            for fila in resultado['historial']:
-                self.tabla.insert("", "end", values=(
-                    fila['n'],
-                    f"{fila['c']:.8f}",
-                    f"{fila['f(c)']:.8f}",  # Para punto fijo esto es g(x_n)
-                    f"{fila['error_absoluto']:.8e}",
-                    f"{fila['error_relativo']:.8f}"
-                ))
-
-            # Mostramos el resultado y decidimos qué gráfica dibujar
-            if resultado['exito']:
-                messagebox.showinfo("Convergencia Exitosa",
-                                    f"Raíz: {resultado['raiz']:.8f}\nIteraciones: {resultado['iteraciones_totales']}")
-                self.graficador.graficar_metodo(seleccion, funcion_graficar, resultado['historial'], resultado['raiz'])
-            else:
-                messagebox.showwarning("Aviso", resultado['mensaje'])
+                self.lbl_res_final.config(text="No hubo convergencia.")
 
         except Exception as e:
-            messagebox.showerror("Error de Cálculo", f"Se produjo un error: {str(e)}")
+            messagebox.showerror("Error", str(e))
 
     def ejecutar_comparacion(self):
         """Ejecuta ambos métodos simultáneamente para el análisis del Ejercicio 2."""
