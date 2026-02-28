@@ -10,6 +10,23 @@ class GraficadorDinamico:
     Implementa visualizaciones específicas para métodos numéricos y análisis de convergencia.
     """
 
+    TEMAS = {
+        "Oscuro": {
+            "face": "#0b0b14",
+            "text": "white",
+            "spine": "#333333",
+            "grid": 0.1,
+            "accent": "#6699ff"
+        },
+        "Claro": {
+            "face": "#fdfdfd",
+            "text": "#1a1a1a",
+            "spine": "#cccccc",
+            "grid": 0.2,
+            "accent": "#0056b3"
+        }
+    }
+
     def __init__(self, frame_contenedor):
         """
         Inicializa la figura y los paneles de visualización.
@@ -18,23 +35,25 @@ class GraficadorDinamico:
             frame_contenedor: El frame de Tkinter donde se incrustará el lienzo.
         """
         self.frame = frame_contenedor
+        self.tema_actual = "Oscuro"
+        tema = self.TEMAS[self.tema_actual]
         
-        # Configuración de la figura con fondo extra oscuro estilo imagen
-        self.figura = Figure(figsize=(10, 8), dpi=100, facecolor='#0b0b14')
+        # Configuración de la figura
+        self.figura = Figure(figsize=(10, 8), dpi=100, facecolor=tema["face"])
         
         # Subplot 1: Panel de Función (Arriba)
         self.ax1 = self.figura.add_subplot(211)
-        self.ax1.set_facecolor('#0b0b14')
-        self.ax1.tick_params(colors='white', labelsize=9)
+        self.ax1.set_facecolor(tema["face"])
+        self.ax1.tick_params(colors=tema["text"], labelsize=9)
         for spine in self.ax1.spines.values():
-            spine.set_color('#333333')
+            spine.set_color(tema["spine"])
             
         # Subplot 2: Panel de Convergencia (Abajo)
         self.ax2 = self.figura.add_subplot(212)
-        self.ax2.set_facecolor('#0b0b14')
-        self.ax2.tick_params(colors='white', labelsize=9)
+        self.ax2.set_facecolor(tema["face"])
+        self.ax2.tick_params(colors=tema["text"], labelsize=9)
         for spine in self.ax2.spines.values():
-            spine.set_color('#333333')
+            spine.set_color(tema["spine"])
         
         self.figura.tight_layout(pad=4.0)
         
@@ -42,7 +61,7 @@ class GraficadorDinamico:
         self.canvas = FigureCanvasTkAgg(self.figura, master=self.frame)
         self.widget = self.canvas.get_tk_widget()
         self.widget.pack(fill="both", expand=True)
-        self.widget.configure(bg='#0b0b14')
+        self.widget.configure(bg=tema["face"])
         
         # Tooltip para hover
         self.tooltip = None
@@ -56,10 +75,16 @@ class GraficadorDinamico:
 
     def limpiar(self):
         """Limpia ambos paneles para un nuevo gráfico."""
+        tema = self.TEMAS[self.tema_actual]
         self.ax1.clear()
         self.ax2.clear()
-        self.ax1.set_facecolor('#0b0b14')
-        self.ax2.set_facecolor('#0b0b14')
+        self.ax1.set_facecolor(tema["face"])
+        self.ax2.set_facecolor(tema["face"])
+        self.ax1.tick_params(colors=tema["text"])
+        self.ax2.tick_params(colors=tema["text"])
+        for spine in self.ax1.spines.values(): spine.set_color(tema["spine"])
+        for spine in self.ax2.spines.values(): spine.set_color(tema["spine"])
+        
         self.datos_puntos_ax2 = []
         self.curva_ax1 = None
         if self.tooltip:
@@ -68,6 +93,16 @@ class GraficadorDinamico:
             except:
                 pass
             self.tooltip = None
+
+    def set_tema(self, nuevo_tema):
+        """Actualiza el tema de los gráficos."""
+        if nuevo_tema in self.TEMAS:
+            self.tema_actual = nuevo_tema
+            tema = self.TEMAS[self.tema_actual]
+            self.figura.set_facecolor(tema["face"])
+            self.widget.configure(bg=tema["face"])
+            self.limpiar()
+            self.canvas.draw()
 
     def graficar_metodo(self, metodo_nombre, funcion, historial, raiz, extra_params=None):
         """
@@ -78,7 +113,8 @@ class GraficadorDinamico:
         colores_multi = ['#66ffff', '#55ff55', '#ffaa00', '#aa66ff']
         
         # 1. Graficar en ax1 (Panel de Función)
-        self.ax1.set_title(f"Convergencia - {metodo_nombre}", color='white', fontweight='bold', pad=15)
+        tema = self.TEMAS[self.tema_actual]
+        self.ax1.set_title(f"Convergencia - {metodo_nombre}", color=tema["text"], fontweight='bold', pad=15)
         
         # Determinar rango dinámico
         todas_x = []
@@ -105,13 +141,13 @@ class GraficadorDinamico:
         y = [funcion(val) for val in x]
         
         # Guardar referencia para hover
-        self.curva_ax1, = self.ax1.plot(x, y, color='#6699ff', linewidth=2, label='f(x)' if metodo_nombre != "Punto Fijo" else 'y = g(x)')
-        self.ax1.fill_between(x, y, 0, color='#6699ff', alpha=0.05)
+        self.curva_ax1, = self.ax1.plot(x, y, color=tema["accent"], linewidth=2, label='f(x)' if metodo_nombre != "Punto Fijo" else 'y = g(x)')
+        self.ax1.fill_between(x, y, 0, color=tema["accent"], alpha=0.05)
         
         if metodo_nombre == "Punto Fijo":
-            self.ax1.plot(x, x, color='white', linestyle='--', alpha=0.4, label='y = x')
+            self.ax1.plot(x, x, color=tema["text"], linestyle='--', alpha=0.4, label='y = x')
 
-        self.ax1.axhline(0, color='#555555', linewidth=0.8)
+        self.ax1.axhline(0, color=tema["spine"], linewidth=0.8)
         
         # Dibujar puntos de convergencia
         if es_comparacion:
@@ -139,23 +175,23 @@ class GraficadorDinamico:
             # ax2 simple
             it = [h['n'] for h in historial]
             err = [h['error_absoluto'] for h in historial]
-            self.ax2.semilogy(it, err, 'o-', color='#6699ff', markersize=4)
-            self.ax2.fill_between(it, err, 1e-20, color='#6699ff', alpha=0.1)
-            self.datos_puntos_ax2 = [(it, err, "Error", '#6699ff')]
+            self.ax2.semilogy(it, err, 'o-', color=tema["accent"], markersize=4)
+            self.ax2.fill_between(it, err, 1e-20, color=tema["accent"], alpha=0.1)
+            self.datos_puntos_ax2 = [(it, err, "Error", tema["accent"])]
 
         # Raíz estrella roja
         self.ax1.plot(raiz, funcion(raiz), '*', color='#ff5555', markersize=15, label=f'Raíz: {raiz:.6f}', zorder=5)
         
-        self.ax1.legend(facecolor='#0b0b14', edgecolor='#333333', labelcolor='white', fontsize=8)
-        self.ax1.grid(True, alpha=0.1)
+        self.ax1.legend(facecolor=tema["face"], edgecolor=tema["spine"], labelcolor=tema["text"], fontsize=8)
+        self.ax1.grid(True, alpha=tema["grid"])
 
         # Config ax2
-        self.ax2.set_title("Convergencia del Error Absoluto (escala log)", color='white', fontweight='bold', fontsize=10)
-        self.ax2.set_xlabel("Iteración n", color='white', fontsize=9)
-        self.ax2.set_ylabel("Error absoluto", color='white', fontsize=9)
-        self.ax2.grid(True, which="both", ls="-", alpha=0.05)
+        self.ax2.set_title("Convergencia del Error Absoluto (escala log)", color=tema["text"], fontweight='bold', fontsize=10)
+        self.ax2.set_xlabel("Iteración n", color=tema["text"], fontsize=9)
+        self.ax2.set_ylabel("Error absoluto", color=tema["text"], fontsize=9)
+        self.ax2.grid(True, which="both", ls="-", alpha=tema["grid"] / 2)
         if es_comparacion:
-            self.ax2.legend(facecolor='#0b0b14', edgecolor='#333333', labelcolor='white', fontsize=8)
+            self.ax2.legend(facecolor=tema["face"], edgecolor=tema["spine"], labelcolor=tema["text"], fontsize=8)
         
         self.canvas.draw()
 
@@ -220,13 +256,14 @@ class GraficadorDinamico:
         Grafica la comparación de convergencia de dos métodos.
         """
         self.limpiar()
+        tema = self.TEMAS[self.tema_actual]
         self.ax1.axis('off') # Ocultar panel de función en comparación si se prefiere, o mostrar ambos
-        self.ax1.text(0.5, 0.5, "Comparación de\nConvergencia", color='white', 
+        self.ax1.text(0.5, 0.5, "Comparación de\nConvergencia", color=tema["text"], 
                      ha='center', va='center', fontsize=14)
         
-        self.ax2.set_title(titulo, color='white')
-        self.ax2.set_xlabel("Iteración", color='white')
-        self.ax2.set_ylabel("Error Absoluto", color='white')
+        self.ax2.set_title(titulo, color=tema["text"])
+        self.ax2.set_xlabel("Iteración", color=tema["text"])
+        self.ax2.set_ylabel("Error Absoluto", color=tema["text"])
         
         # Método 1
         it1 = [h['n'] for h in historial_1]
@@ -278,6 +315,7 @@ class GraficadorDinamico:
             return
 
         if event.inaxes == self.ax2:
+            tema = self.TEMAS[self.tema_actual]
             # Hover en gráfica de convergencia
             for data in self.datos_puntos_ax2:
                 it_list, err_list, label, color = data
@@ -287,21 +325,22 @@ class GraficadorDinamico:
                         self.tooltip = self.ax2.annotate(
                             f"{label}\nIter: {it}\nError: {err:.2e}",
                             xy=(it, err), xytext=(15, 15), textcoords="offset points",
-                            bbox=dict(boxstyle="round", fc="#0b0b14", ec=color, alpha=0.9),
-                            color="white", fontsize=8, arrowprops=dict(arrowstyle="->", color=color)
+                            bbox=dict(boxstyle="round", fc=tema["face"], ec=color, alpha=0.9),
+                            color=tema["text"], fontsize=8, arrowprops=dict(arrowstyle="->", color=color)
                         )
                         self.canvas.draw_idle()
                         return
         
         elif event.inaxes == self.ax1:
+            tema = self.TEMAS[self.tema_actual]
             # Hover en gráfica principal (mostrar coordenadas dinámicas)
             if event.xdata is not None and event.ydata is not None:
                 if self.tooltip: self.tooltip.remove()
                 self.tooltip = self.ax1.annotate(
                     f"x = {event.xdata:.4f}\ny = {event.ydata:.4f}",
                     xy=(event.xdata, event.ydata), xytext=(15, 15), textcoords="offset points",
-                    bbox=dict(boxstyle="round", fc="#0b0b14", ec="#6699ff", alpha=0.9),
-                    color="white", fontsize=8, arrowprops=dict(arrowstyle="->", color="#6699ff")
+                    bbox=dict(boxstyle="round", fc=tema["face"], ec=tema["accent"], alpha=0.9),
+                    color=tema["text"], fontsize=8, arrowprops=dict(arrowstyle="->", color=tema["accent"])
                 )
                 self.canvas.draw_idle()
                 return
