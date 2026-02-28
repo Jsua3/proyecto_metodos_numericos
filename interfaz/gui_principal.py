@@ -11,11 +11,44 @@ class VentanaPrincipal(tk.Tk):
     Clase principal que construye y gestiona la Interfaz Gráfica de Usuario (GUI).
     """
 
+    TEMAS = {
+        "Oscuro": {
+            "bg_main": "#0b0b14",
+            "bg_sidebar": "#12121e",
+            "text_main": "#ffffff",
+            "text_sidebar": "#a9b7c6",
+            "accent_blue": "#3a5aff",
+            "accent_green": "#00ff88",
+            "entry_bg": "#1a1a2e",
+            "entry_fg": "white",
+            "border_color": "#333333",
+            "tree_bg": "#0b0b14",
+            "tree_fg": "#a9b7c6",
+            "tree_heading_bg": "#1a1a2e"
+        },
+        "Claro": {
+            "bg_main": "#fdfdfd",
+            "bg_sidebar": "#f0f0f0",
+            "text_main": "#1a1a1a",
+            "text_sidebar": "#444444",
+            "accent_blue": "#0056b3",
+            "accent_green": "#218838",
+            "entry_bg": "#ffffff",
+            "entry_fg": "#333333",
+            "border_color": "#cccccc",
+            "tree_bg": "#ffffff",
+            "tree_fg": "#333333",
+            "tree_heading_bg": "#e0e0e0"
+        }
+    }
+
     def __init__(self):
         super().__init__()
         self.title("Métodos Numéricos - Ingeniería de Software")
         self.geometry("1200x850")
-        self.configure(bg="#0b0b14")
+        
+        self.tema_actual = "Oscuro"
+        self.configure(bg=self.TEMAS[self.tema_actual]["bg_main"])
 
         # --- EFECTOS DE TRANSPARENCIA ---
         self.attributes('-alpha', 0.0)
@@ -25,80 +58,90 @@ class VentanaPrincipal(tk.Tk):
         self.configurar_estilos()
 
         # Layout principal: Sidebar y Contenido
-        self.sidebar = tk.Frame(self, bg="#12121e", width=280)
+        tema = self.TEMAS[self.tema_actual]
+        self.sidebar = tk.Frame(self, bg=tema["bg_sidebar"], width=280)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
 
-        self.contenedor_principal = tk.Frame(self, bg="#0b0b14")
+        self.contenedor_principal = tk.Frame(self, bg=tema["bg_main"])
         self.contenedor_principal.pack(side="right", fill="both", expand=True)
 
         self.crear_sidebar_content()
         self.crear_main_content()
 
     def configurar_estilos(self):
-        """Aplica un tema oscuro premium estilo imagen."""
+        """Aplica estilos basados en el tema actual."""
+        tema = self.TEMAS[self.tema_actual]
         self.estilo = ttk.Style()
         if 'clam' in self.estilo.theme_names():
             self.estilo.theme_use('clam')
 
-        bg_dark = "#12121e"
-        accent_blue = "#3a5aff"
-        accent_green = "#00ff88"
-        text_white = "#ffffff"
-        text_gray = "#a9b7c6"
-
-        self.estilo.configure("TLabel", font=("Segoe UI", 10), background=bg_dark, foreground=text_white)
-        self.estilo.configure("Sidebar.TLabel", font=("Segoe UI", 9, "bold"), background=bg_dark, foreground=text_gray)
+        self.estilo.configure("TLabel", font=("Segoe UI", 10), background=tema["bg_sidebar"], foreground=tema["text_main"])
+        self.estilo.configure("Sidebar.TLabel", font=("Segoe UI", 9, "bold"), background=tema["bg_sidebar"], foreground=tema["text_sidebar"])
         
-        # Botones personalizados
-        self.estilo.configure("Calcular.TButton", font=("Segoe UI", 10, "bold"), background=accent_blue, foreground="white")
-        self.estilo.map("Calcular.TButton", background=[('active', '#2d4acc')])
+        self.estilo.configure("Calcular.TButton", font=("Segoe UI", 10, "bold"), background=tema["accent_blue"], foreground="white")
+        self.estilo.map("Calcular.TButton", background=[('active', tema["accent_blue"])])
         
         self.estilo.configure("Limpiar.TButton", font=("Segoe UI", 10, "bold"), background="#333333", foreground="white")
         self.estilo.map("Limpiar.TButton", background=[('active', '#444444')])
 
-        self.estilo.configure("Treeview", font=("Consolas", 9), rowheight=25, background="#0b0b14", 
-                              fieldbackground="#0b0b14", foreground=text_gray)
-        self.estilo.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"), background="#1a1a2e", foreground=accent_blue)
+        self.estilo.configure("Treeview", font=("Consolas", 9), rowheight=25, background=tema["tree_bg"], 
+                              fieldbackground=tema["tree_bg"], foreground=tema["tree_fg"])
+        self.estilo.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"), background=tema["tree_heading_bg"], foreground=tema["accent_blue"])
 
-        self.estilo.configure("TCheckbutton", background=bg_dark, foreground=text_white, font=("Segoe UI", 9))
+        self.estilo.configure("TCheckbutton", background=tema["bg_sidebar"], foreground=tema["text_main"], font=("Segoe UI", 9))
+        
+        # Estilo para el ComboBox
+        self.estilo.configure("TCombobox", fieldbackground=tema["entry_bg"], background=tema["bg_sidebar"], foreground=tema["text_main"])
 
     def crear_sidebar_content(self):
         """Construye el contenido de la barra lateral izquierda."""
         padding = {"padx": 20, "pady": 5}
+        tema = self.TEMAS[self.tema_actual]
         
+        # Botón de cambio de tema
+        self.btn_tema = tk.Button(self.sidebar, text="🌙 Modo Oscuro" if self.tema_actual == "Oscuro" else "☀️ Modo Claro",
+                                  bg=tema["accent_blue"], fg="white", font=("Segoe UI", 8, "bold"),
+                                  command=self.alternar_tema, bd=0, padx=10, pady=5)
+        self.btn_tema.pack(anchor="ne", padx=10, pady=10)
+
         # Título del software
-        tk.Label(self.sidebar, text="Seleccione el Método / Ejercicio:", bg="#12121e", fg="white", 
-                 font=("Segoe UI", 10, "bold")).pack(anchor="w", **padding, pady=(20, 5))
+        self.lbl_metodo_titulo = tk.Label(self.sidebar, text="Seleccione el Método / Ejercicio:", bg=tema["bg_sidebar"], fg=tema["text_main"], 
+                 font=("Segoe UI", 10, "bold"))
+        self.lbl_metodo_titulo.pack(anchor="w", **padding, pady=(5, 5))
         
         self.combo_metodo = ttk.Combobox(self.sidebar, values=["Bisección", "Falsa Posición", "Punto Fijo", "Newton-Raphson", "Secante"], state="readonly")
         self.combo_metodo.pack(fill="x", **padding)
         self.combo_metodo.current(2) # Punto Fijo por defecto como en la imagen
 
         # Panel de Parámetros
-        frame_params = tk.LabelFrame(self.sidebar, text=" Parámetros de entrada ", bg="#12121e", fg="#3a5aff", font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
-        frame_params.pack(fill="x", **padding, pady=15)
+        self.frame_params = tk.LabelFrame(self.sidebar, text=" Parámetros de entrada ", bg=tema["bg_sidebar"], fg=tema["accent_blue"], font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
+        self.frame_params.pack(fill="x", **padding, pady=15)
 
-        tk.Label(frame_params, text="Función f(x) / g(x):", bg="#12121e", fg="#a9b7c6", font=("Segoe UI", 8)).pack(anchor="w", padx=10, pady=(10, 0))
-        self.entry_func = tk.Entry(frame_params, bg="#1a1a2e", fg="white", insertbackground="white", bd=0, highlightthickness=1, highlightbackground="#333333")
+        self.lbl_func = tk.Label(self.frame_params, text="Función f(x) / g(x):", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
+        self.lbl_func.pack(anchor="w", padx=10, pady=(10, 0))
+        self.entry_func = tk.Entry(self.frame_params, bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], bd=0, highlightthickness=1, highlightbackground=tema["border_color"])
         self.entry_func.insert(0, "0.5 * np.cos(x) + 1.5")
         self.entry_func.pack(fill="x", padx=10, pady=5)
 
-        tk.Label(frame_params, text="Valor inicial (x0 / a):", bg="#12121e", fg="#a9b7c6", font=("Segoe UI", 8)).pack(anchor="w", padx=10)
-        self.entry_a = tk.Entry(frame_params, bg="#1a1a2e", fg="white", insertbackground="white", bd=0, highlightthickness=1, highlightbackground="#333333")
+        self.lbl_a = tk.Label(self.frame_params, text="Valor inicial (x0 / a):", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
+        self.lbl_a.pack(anchor="w", padx=10)
+        self.entry_a = tk.Entry(self.frame_params, bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], bd=0, highlightthickness=1, highlightbackground=tema["border_color"])
         self.entry_a.insert(0, "1.0")
         self.entry_a.pack(fill="x", padx=10, pady=5)
 
         self.var_comparar = tk.BooleanVar(value=True)
-        ttk.Checkbutton(frame_params, text="Comparar x0 (0.5, 1.0, 1.5, 2.0)", variable=self.var_comparar).pack(anchor="w", padx=10, pady=5)
+        ttk.Checkbutton(self.frame_params, text="Comparar x0 (0.5, 1.0, 1.5, 2.0)", variable=self.var_comparar).pack(anchor="w", padx=10, pady=5)
 
-        tk.Label(frame_params, text="Tolerancia:", bg="#12121e", fg="#a9b7c6", font=("Segoe UI", 8)).pack(anchor="w", padx=10)
-        self.entry_tol = tk.Entry(frame_params, bg="#1a1a2e", fg="white", insertbackground="white", bd=0, highlightthickness=1, highlightbackground="#333333")
+        self.lbl_tol = tk.Label(self.frame_params, text="Tolerancia:", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
+        self.lbl_tol.pack(anchor="w", padx=10)
+        self.entry_tol = tk.Entry(self.frame_params, bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], bd=0, highlightthickness=1, highlightbackground=tema["border_color"])
         self.entry_tol.insert(0, "1e-8")
         self.entry_tol.pack(fill="x", padx=10, pady=5)
 
-        tk.Label(frame_params, text="Máx. Iteraciones:", bg="#12121e", fg="#a9b7c6", font=("Segoe UI", 8)).pack(anchor="w", padx=10)
-        self.entry_max_iter = tk.Entry(frame_params, bg="#1a1a2e", fg="white", insertbackground="white", bd=0, highlightthickness=1, highlightbackground="#333333")
+        self.lbl_max_iter = tk.Label(self.frame_params, text="Máx. Iteraciones:", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
+        self.lbl_max_iter.pack(anchor="w", padx=10)
+        self.entry_max_iter = tk.Entry(self.frame_params, bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], bd=0, highlightthickness=1, highlightbackground=tema["border_color"])
         self.entry_max_iter.insert(0, "100")
         self.entry_max_iter.pack(fill="x", padx=10, pady=(5, 15))
 
@@ -111,28 +154,29 @@ class VentanaPrincipal(tk.Tk):
         ttk.Checkbutton(self.sidebar, text="Mostrar Tabla", variable=self.var_tabla).pack(anchor="w", **padding)
 
         # Botones
-        frame_btns = tk.Frame(self.sidebar, bg="#12121e")
-        frame_btns.pack(fill="x", **padding, pady=20)
-        ttk.Button(frame_btns, text="▶ Calcular", style="Calcular.TButton", command=self.ejecutar_calculo).pack(side="left", expand=True, fill="x", padx=(0, 5))
-        ttk.Button(frame_btns, text="Limpiar", style="Limpiar.TButton", command=self.limpiar_todo).pack(side="left", expand=True, fill="x")
+        self.frame_btns = tk.Frame(self.sidebar, bg=tema["bg_sidebar"])
+        self.frame_btns.pack(fill="x", **padding, pady=20)
+        ttk.Button(self.frame_btns, text="▶ Calcular", style="Calcular.TButton", command=self.ejecutar_calculo).pack(side="left", expand=True, fill="x", padx=(0, 5))
+        ttk.Button(self.frame_btns, text="Limpiar", style="Limpiar.TButton", command=self.limpiar_todo).pack(side="left", expand=True, fill="x")
 
         # Resultado Final
-        self.frame_res = tk.LabelFrame(self.sidebar, text=" Resultado Final ", bg="#12121e", fg="#00ff88", font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
+        self.frame_res = tk.LabelFrame(self.sidebar, text=" Resultado Final ", bg=tema["bg_sidebar"], fg=tema["accent_green"], font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
         self.frame_res.pack(fill="both", expand=True, **padding, pady=(0, 20))
         
-        self.lbl_res_final = tk.Label(self.frame_res, text="Esperando cálculo...", bg="#12121e", fg="#00ff88", 
+        self.lbl_res_final = tk.Label(self.frame_res, text="Esperando cálculo...", bg=tema["bg_sidebar"], fg=tema["accent_green"], 
                                      font=("Consolas", 9, "bold"), justify="left", anchor="nw")
         self.lbl_res_final.pack(fill="both", expand=True, padx=10, pady=10)
 
     def crear_main_content(self):
         """Panel derecho con gráficas arriba y tabla abajo."""
+        tema = self.TEMAS[self.tema_actual]
         # Contenedor de gráficas
-        self.frame_grafica = tk.Frame(self.contenedor_principal, bg="#0b0b14")
+        self.frame_grafica = tk.Frame(self.contenedor_principal, bg=tema["bg_main"])
         self.frame_grafica.pack(fill="both", expand=True, padx=10, pady=5)
         self.graficador = GraficadorDinamico(self.frame_grafica)
 
         # Contenedor de tabla
-        self.frame_tabla_container = tk.Frame(self.contenedor_principal, bg="#0b0b14", height=250)
+        self.frame_tabla_container = tk.Frame(self.contenedor_principal, bg=tema["bg_main"], height=250)
         self.frame_tabla_container.pack(fill="x", side="bottom", padx=10, pady=10)
         self.frame_tabla_container.pack_propagate(False)
 
@@ -153,6 +197,54 @@ class VentanaPrincipal(tk.Tk):
         for item in self.tabla.get_children():
             self.tabla.delete(item)
         self.lbl_res_final.config(text="Esperando cálculo...")
+
+    def aparecer_paulatinamente(self):
+        """Efecto de fundido al inicio."""
+        alpha = self.attributes("-alpha")
+        if alpha < 0.97:
+            alpha += 0.05
+            self.attributes("-alpha", alpha)
+            self.after(30, self.aparecer_paulatinamente)
+
+    def alternar_tema(self):
+        """Cambia entre el tema claro y oscuro."""
+        self.tema_actual = "Claro" if self.tema_actual == "Oscuro" else "Oscuro"
+        tema = self.TEMAS[self.tema_actual]
+        
+        # Actualizar colores de la ventana
+        self.configure(bg=tema["bg_main"])
+        self.sidebar.configure(bg=tema["bg_sidebar"])
+        self.contenedor_principal.configure(bg=tema["bg_main"])
+        self.frame_grafica.configure(bg=tema["bg_main"])
+        self.frame_tabla_container.configure(bg=tema["bg_main"])
+        
+        # Actualizar widgets del sidebar
+        self.btn_tema.config(text="🌙 Modo Oscuro" if self.tema_actual == "Oscuro" else "☀️ Modo Claro",
+                             bg=tema["accent_blue"])
+        self.lbl_metodo_titulo.config(bg=tema["bg_sidebar"], fg=tema["text_main"])
+        self.frame_params.config(bg=tema["bg_sidebar"], fg=tema["accent_blue"])
+        self.lbl_func.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
+        self.entry_func.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
+        self.lbl_a.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
+        self.entry_a.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
+        self.lbl_tol.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
+        self.entry_tol.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
+        self.lbl_max_iter.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
+        self.entry_max_iter.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
+        self.frame_btns.config(bg=tema["bg_sidebar"])
+        self.frame_res.config(bg=tema["bg_sidebar"], fg=tema["accent_green"])
+        self.lbl_res_final.config(bg=tema["bg_sidebar"], fg=tema["accent_green"])
+        
+        # Actualizar estilos ttk
+        self.configurar_estilos()
+        
+        # Actualizar graficador
+        self.graficador.set_tema(self.tema_actual)
+        
+        # Redibujar si hay algo graficado
+        if hasattr(self, 'ultimo_redibujado') and self.ultimo_redibujado:
+            func, args = self.ultimo_redibujado
+            func(*args)
 
     def ejecutar_calculo(self):
         """Ejecuta el cálculo manejando la comparación de x0 si está activa."""
@@ -218,7 +310,9 @@ class VentanaPrincipal(tk.Tk):
             # Graficar
             historias = [r['historial'] for r in resultados if r['exito']]
             if historias:
-                self.graficador.graficar_metodo(metodo_nombre, f_eval, historias if self.var_comparar.get() else historias[0], res_to_show['raiz'])
+                data_graf = (metodo_nombre, f_eval, historias if self.var_comparar.get() else historias[0], res_to_show['raiz'])
+                self.ultimo_redibujado = (self.graficador.graficar_metodo, data_graf)
+                self.graficador.graficar_metodo(*data_graf)
 
             # Mostrar resultado final en sidebar
             if mejor_resultado:
@@ -257,9 +351,9 @@ class VentanaPrincipal(tk.Tk):
             messagebox.showinfo("Comparación Completada", mensaje)
 
             # Llamamos a la función que dibujará la gráfica superpuesta
-            self.graficador.graficar_comparacion("Bisección vs Falsa Posición", 
-                                              res_bis['historial'], "Bisección", 
-                                              res_fp['historial'], "Falsa Posición")
+            data_graf = ("Bisección vs Falsa Posición", res_bis['historial'], "Bisección", res_fp['historial'], "Falsa Posición")
+            self.ultimo_redibujado = (self.graficador.graficar_comparacion, data_graf)
+            self.graficador.graficar_comparacion(*data_graf)
 
         except Exception as e:
             messagebox.showerror("Error", f"Error en la comparación: {str(e)}")
@@ -322,9 +416,9 @@ class VentanaPrincipal(tk.Tk):
             messagebox.showinfo("Análisis de Escalabilidad (Ejercicio 5)", mensaje)
 
             # Graficamos la comparación de convergencia
-            self.graficador.graficar_comparacion("Secante vs Newton-Raphson", 
-                                              res_sec['historial'], "Secante", 
-                                              res_nr['historial'], "Newton-Raphson")
+            data_graf = ("Secante vs Newton-Raphson", res_sec['historial'], "Secante", res_nr['historial'], "Newton-Raphson")
+            self.ultimo_redibujado = (self.graficador.graficar_comparacion, data_graf)
+            self.graficador.graficar_comparacion(*data_graf)
 
         except Exception as e:
             messagebox.showerror("Error", f"Error en la comparación: {str(e)}")
