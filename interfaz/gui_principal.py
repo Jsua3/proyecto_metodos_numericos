@@ -69,7 +69,11 @@ class VentanaPrincipal(tk.Tk):
             "border_color": "#333333",
             "tree_bg": "#0b0b14",
             "tree_fg": "#a9b7c6",
-            "tree_heading_bg": "#1a1a2e"
+            "tree_heading_bg": "#1a1a2e",
+            "btn_calc_bg": "#00ff88",
+            "btn_calc_fg": "#0b0b14",
+            "btn_clear_bg": "#2d2d3d",
+            "btn_clear_fg": "#ffffff"
         },
         "Claro": {
             "bg_main": "#fdfdfd",
@@ -83,7 +87,11 @@ class VentanaPrincipal(tk.Tk):
             "border_color": "#cccccc",
             "tree_bg": "#ffffff",
             "tree_fg": "#333333",
-            "tree_heading_bg": "#e0e0e0"
+            "tree_heading_bg": "#e0e0e0",
+            "btn_calc_bg": "#218838",
+            "btn_calc_fg": "#ffffff",
+            "btn_clear_bg": "#6c757d",
+            "btn_clear_fg": "#ffffff"
         }
     }
 
@@ -124,11 +132,11 @@ class VentanaPrincipal(tk.Tk):
         self.estilo.configure("TLabel", font=("Segoe UI", 10), background=tema["bg_sidebar"], foreground=tema["text_main"])
         self.estilo.configure("Sidebar.TLabel", font=("Segoe UI", 9, "bold"), background=tema["bg_sidebar"], foreground=tema["text_sidebar"])
         
-        self.estilo.configure("Calcular.TButton", font=("Segoe UI", 10, "bold"), background=tema["accent_blue"], foreground="white")
-        self.estilo.map("Calcular.TButton", background=[('active', tema["accent_blue"])])
+        self.estilo.configure("Calcular.TButton", font=("Segoe UI", 10, "bold"), background=tema["btn_calc_bg"], foreground=tema["btn_calc_fg"])
+        self.estilo.map("Calcular.TButton", background=[('active', tema["btn_calc_bg"])])
         
-        self.estilo.configure("Limpiar.TButton", font=("Segoe UI", 10, "bold"), background="#333333", foreground="white")
-        self.estilo.map("Limpiar.TButton", background=[('active', '#444444')])
+        self.estilo.configure("Limpiar.TButton", font=("Segoe UI", 10, "bold"), background=tema["btn_clear_bg"], foreground=tema["btn_clear_fg"])
+        self.estilo.map("Limpiar.TButton", background=[('active', tema["btn_clear_bg"])])
 
         self.estilo.configure("Treeview", font=("Consolas", 9), rowheight=25, background=tema["tree_bg"], 
                               fieldbackground=tema["tree_bg"], foreground=tema["tree_fg"])
@@ -146,7 +154,7 @@ class VentanaPrincipal(tk.Tk):
         
         # Botón de cambio de tema
         self.btn_tema = tk.Button(self.sidebar, text="🌙 Modo Oscuro" if self.tema_actual == "Oscuro" else "☀️ Modo Claro",
-                                  bg=tema["accent_blue"], fg="white", font=("Segoe UI", 8, "bold"),
+                                  bg=tema["btn_clear_bg"], fg=tema["btn_clear_fg"], font=("Segoe UI", 8, "bold"),
                                   command=self.alternar_tema, bd=0, padx=10, pady=5)
         self.btn_tema.pack(anchor="ne", padx=10, pady=10)
 
@@ -302,7 +310,7 @@ class VentanaPrincipal(tk.Tk):
         
         # Actualizar widgets del sidebar
         self.btn_tema.config(text="🌙 Modo Oscuro" if self.tema_actual == "Oscuro" else "☀️ Modo Claro",
-                             bg=tema["accent_blue"])
+                             bg=tema["btn_clear_bg"], fg=tema["btn_clear_fg"])
         self.lbl_metodo_titulo.config(bg=tema["bg_sidebar"], fg=tema["text_main"])
         self.frame_params.config(bg=tema["bg_sidebar"], fg=tema["accent_blue"])
         self.lbl_func.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
