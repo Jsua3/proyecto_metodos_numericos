@@ -23,6 +23,13 @@ class PuntoFijo:
         self.max_iter = max_iter
         self.limite_divergencia = limite_divergencia
 
+    def calcular_derivada(self, x: float, h: float = 1e-5) -> float:
+        """
+        Calcula la derivada numérica de g(x) mediante diferencias centrales.
+        g'(x) ≈ (g(x + h) - g(x - h)) / (2h)
+        """
+        return (self.funcion_g(x + h) - self.funcion_g(x - h)) / (2 * h)
+
     def calcular(self, x0: float) -> Dict[str, Union[float, int, List[Dict[str, float]], str]]:
         """
         Ejecuta la iteración de punto fijo a partir del valor inicial x0.

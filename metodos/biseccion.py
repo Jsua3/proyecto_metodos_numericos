@@ -59,8 +59,8 @@ class Biseccion:
                 'error_relativo': error_relativo * 100
             })
 
-            # Criterio de parada: tolerancia o raíz exacta [cite: 31, 34]
-            if error_absoluto < self.tolerancia or fc == 0.0:
+            # Criterio de parada: según especificaciones técnicas
+            if abs(fc) < 1e-15 or error_absoluto < self.tolerancia or (b - a) / 2.0 < self.tolerancia:
                 return {
                     'exito': True,
                     'raiz': c,
