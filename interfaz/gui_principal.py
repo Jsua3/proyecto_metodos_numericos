@@ -108,7 +108,7 @@ class VentanaPrincipal(tk.Tk):
         # Título del software
         self.lbl_metodo_titulo = tk.Label(self.sidebar, text="Seleccione el Método / Ejercicio:", bg=tema["bg_sidebar"], fg=tema["text_main"], 
                  font=("Segoe UI", 10, "bold"))
-        self.lbl_metodo_titulo.pack(anchor="w", **padding, pady=(5, 5))
+        self.lbl_metodo_titulo.pack(anchor="w", padx=20, pady=(5, 5))
         
         self.combo_metodo = ttk.Combobox(self.sidebar, values=["Bisección", "Falsa Posición", "Punto Fijo", "Newton-Raphson", "Secante"], state="readonly")
         self.combo_metodo.pack(fill="x", **padding)
@@ -116,7 +116,7 @@ class VentanaPrincipal(tk.Tk):
 
         # Panel de Parámetros
         self.frame_params = tk.LabelFrame(self.sidebar, text=" Parámetros de entrada ", bg=tema["bg_sidebar"], fg=tema["accent_blue"], font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
-        self.frame_params.pack(fill="x", **padding, pady=15)
+        self.frame_params.pack(fill="x", padx=20, pady=15)
 
         self.lbl_func = tk.Label(self.frame_params, text="Función f(x) / g(x):", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
         self.lbl_func.pack(anchor="w", padx=10, pady=(10, 0))
@@ -155,13 +155,13 @@ class VentanaPrincipal(tk.Tk):
 
         # Botones
         self.frame_btns = tk.Frame(self.sidebar, bg=tema["bg_sidebar"])
-        self.frame_btns.pack(fill="x", **padding, pady=20)
+        self.frame_btns.pack(fill="x", padx=20, pady=20)
         ttk.Button(self.frame_btns, text="▶ Calcular", style="Calcular.TButton", command=self.ejecutar_calculo).pack(side="left", expand=True, fill="x", padx=(0, 5))
         ttk.Button(self.frame_btns, text="Limpiar", style="Limpiar.TButton", command=self.limpiar_todo).pack(side="left", expand=True, fill="x")
 
         # Resultado Final
         self.frame_res = tk.LabelFrame(self.sidebar, text=" Resultado Final ", bg=tema["bg_sidebar"], fg=tema["accent_green"], font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
-        self.frame_res.pack(fill="both", expand=True, **padding, pady=(0, 20))
+        self.frame_res.pack(fill="both", expand=True, padx=20, pady=(0, 20))
         
         self.lbl_res_final = tk.Label(self.frame_res, text="Esperando cálculo...", bg=tema["bg_sidebar"], fg=tema["accent_green"], 
                                      font=("Consolas", 9, "bold"), justify="left", anchor="nw")
