@@ -1,30 +1,37 @@
 import math
-from typing import Tuple, Optional
+import matplotlib.pyplot as plt
+import tkinter as tk
+from metodos.bhaskara import bhaskara
 
-
-def formula_cuadratica(a: float, b: float, c: float) -> Tuple[Optional[float], Optional[float], float]:
+def bhaskara_visualmente(a, b, c):
     """
-    Calcula las raíces de una ecuación de segundo grado ax² + bx + c = 0.
-    Utiliza el discriminante Δ = b² - 4ac.
-
-    Args:
-        a: Coeficiente de x².
-        b: Coeficiente de x.
-        c: Término independiente.
-
-    Returns:
-        Una tupla con (x1, x2, discriminante). x1 y x2 pueden ser None si son imaginarias.
+    Muestra el procedimiento de Bhaskara visualmente usando matplotlib.
     """
-    if a == 0:
-        raise ValueError("El coeficiente 'a' no puede ser cero para una ecuación cuadrática.")
+    raices, discriminante = bhaskara(a, b, c)
 
-    discriminante = b ** 2 - 4 * a * c
+    if raices is None:
+        ecuaciones = [
+            r"$\Delta = b^2 - 4ac$",
+            rf"$\Delta = {b}^2 - 4({a})({c})$",
+            rf"$\Delta = {discriminante}$",
+            r"$\text{No existen raíces reales}$"
+        ]
+    else:
+        x1, x2 = raices
+        ecuaciones = [
+            r"$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$",
+            rf"$x_1 = {x1:.4f}$",
+            rf"$x_2 = {x2:.4f}$"
+        ]
 
-    if discriminante < 0:
-        # Raíces complejas (no manejadas en este script básico, retornamos None)
-        return None, None, discriminante
+    plt.figure(figsize=(6, 4))
+    plt.axis("off")
 
-    x1 = (-b + math.sqrt(discriminante)) / (2 * a)
-    x2 = (-b - math.sqrt(discriminante)) / (2 * a)
+    y = 0.8
+    for eq in ecuaciones:
+        plt.text(0.1, y, eq, fontsize=18)
+        y -= 0.2
 
-    return x1, x2, discriminante
+    plt.title(f"Solución de {a}x² + {b}x + {c} = 0")
+    plt.tight_layout()
+    plt.show()
