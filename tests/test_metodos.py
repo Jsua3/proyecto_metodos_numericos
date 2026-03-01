@@ -5,7 +5,7 @@ from metodos.falsa_posicion import FalsaPosicion
 from metodos.newton_raphson import NewtonRaphson
 from metodos.punto_fijo import PuntoFijo
 from metodos.secante import Secante
-from funciones.definiciones import formula_cuadratica
+from metodos.bhaskara import bhaskara as formula_cuadratica
 
 class TestMetodosNumericos(unittest.TestCase):
 
@@ -48,7 +48,8 @@ class TestMetodosNumericos(unittest.TestCase):
 
     def test_formula_cuadratica(self):
         # x^2 - 5x + 6 = 0 => raíces 2 y 3
-        x1, x2, disc = formula_cuadratica(1, -5, 6)
+        raices, disc = formula_cuadratica(1, -5, 6)
+        x1, x2 = raices
         self.assertEqual(disc, 1)
         self.assertIn(x1, [2, 3])
         self.assertIn(x2, [2, 3])
