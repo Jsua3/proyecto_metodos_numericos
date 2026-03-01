@@ -1,53 +1,71 @@
-# Resolución de Ecuaciones No Lineales - Aplicaciones en Ingeniería de Software
+# 📊 Calculadora de Métodos Numéricos - Guía de Usuario
 
-Este proyecto es una aplicación con Interfaz Gráfica de Usuario (GUI) desarrollada en Python, diseñada para implementar y comparar cinco métodos numéricos clásicos en la resolución de ecuaciones no lineales aplicadas a problemas de arquitectura y sistemas distribuidos.
+Este programa es una herramienta visual e interactiva diseñada para resolver ecuaciones matemáticas complejas de forma automática. Ideal para estudiantes y curiosos que necesitan encontrar soluciones numéricas (raíces) sin complicaciones técnicas.
 
-Desarrollado para el programa de Ingeniería de Software de la Corporación Universitaria Empresarial Alexander von Humboldt.
+---
 
-## Métodos Implementados
-1. **Método de la Bisección:** Optimización de Hash Tables.
-2. **Método de Falsa Posición:** Balanceo de carga en servidores.
-3. **Método de Punto Fijo:** Predicción de crecimiento de Bases de Datos (incluye *Cobweb Plot*).
-4. **Método de Newton-Raphson:** Análisis de concurrencia de hilos (incluye cálculo simbólico de derivadas con SymPy y gráficas de rectas tangentes).
-5. **Método de la Secante:** Predicción de escalabilidad en la nube.
+## 🚀 ¿Cómo empezar? (Para Windows)
 
-## Requisitos Previos
-* Python 3.8 o superior.
-* Git instalado en su sistema.
+Si eres un usuario de Windows, ¡esto es lo más sencillo! No necesitas saber comandos.
 
-## [cite_start]Instrucciones de Instalación [cite: 235, 236]
+1.  **Descarga el proyecto** en tu computadora.
+2.  Busca el archivo llamado **`run.bat`** en la carpeta principal.
+3.  Haz **doble clic** sobre él.
+4.  ¡Listo! El programa se encargará de instalar todo lo necesario y abrir la aplicación por ti.
 
-1. Clone este repositorio en su máquina local:
-   ```bash
-   git clone https://github.com/Jsua3/proyecto_metodos_numericos.git
-   cd proyecto_metodos_numericos
+---
 
-2. Cree un entorno virtual para aislar las dependencias:
+## 🛠 ¿Qué puedes hacer con esta aplicación?
 
-    python -m venv .venv
+Esta herramienta te permite encontrar el valor de "x" que hace que una función sea igual a cero (lo que llamamos "hallar la raíz").
 
-3. Active el entorno virtual:
+- **Escribe tus fórmulas**: Introduce funciones matemáticas de forma natural (ej. `x^2 - 4`, `sin(x) + x`, etc.).
+- **Ve la solución en vivo**: El programa genera una gráfica interactiva donde puedes ver exactamente dónde cruza la función el eje X.
+- **Diferentes métodos**: Puedes elegir entre varias estrategias clásicas (Bisección, Newton-Raphson, Punto Fijo, etc.).
+- **Resultados paso a paso**: Una tabla detallada te muestra cómo el programa "adivina" y corrige la solución hasta llegar a la más precisa.
 
-    Windows: .venv\Scripts\activate
-    macOS/Linux: source .venv/bin/activate
+---
 
-4. Instale las dependencias requeridas:
+## 🖱️ Controles rápidos en las gráficas
 
-   pip install -r requirements.txt
+- **Zoom**: Usa la rueda del ratón para acercarte o alejarte y ver los detalles.
+- **Información al pasar el mouse**: Pasa el puntero sobre los puntos para ver el error, el número de paso y las coordenadas (x, y).
+- **Botones con contraste**: Los botones principales cambian de color al pasar el mouse para que sea más fácil saber dónde hacer clic.
+- **Temas Claro y Oscuro**: Alterna la estética visual según tu preferencia con el botón de modo (🌙/☀️).
 
-## Instrucciones de Ejecución 
+---
 
-Para iniciar la interfaz gráfica de usuario, asegúrese de tener su entorno virtual activado y 
-ejecute el punto de entrada principal del programa:
+## 💻 Sección para Desarrolladores (Instalación Manual)
 
-python main.py 
+Si prefieres hacerlo manualmente o estás en Linux/Mac:
 
-## Estructura del Proyecto
-    El código sigue estrictamente el estándar PEP 8 y está organizado bajo principios de Programación Orientada a Objetos:
+1.  **Requisito**: Tener instalado Python 3.10 o superior.
+2.  **Preparar el entorno**:
+    ```bash
+    python -m venv venv
+    ```
+3.  **Activar el entorno**:
+    - Windows: `venv\Scripts\activate`
+    - Linux/Mac: `source venv/bin/activate`
+4.  **Instalar paquetes necesarios**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+5.  **Iniciar**:
+    ```bash
+    python main.py
+    ```
 
-    /metodos/: Clases individuales con la lógica matemática de cada algoritmo.
+---
 
-    /interfaz/: Construcción de la vista visual y gráficas embebidas de Matplotlib.
+## 📂 Organización del Proyecto
 
-    /main.py: Punto de entrada que orquesta la aplicación.
-   
+Para los que quieran ver cómo está construido:
+- `main.py`: Punto de inicio.
+- `metodos/`: Los algoritmos matemáticos base.
+- `interfaz/`: Todo el diseño visual y gráficas interactivas.
+- `funciones/`: Herramientas para validar y calcular expresiones.
+- `guia_tecnica_proyecto.py`: Un reporte detallado con todas las fórmulas matemáticas exactas.
+
+---
+*Proyecto de Análisis Numérico - Ingeniería de Software*
