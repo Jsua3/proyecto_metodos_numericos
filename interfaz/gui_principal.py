@@ -1,10 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
 import numpy as np
+import sympy as sp
 from interfaz.graficas import GraficadorDinamico
 from interfaz.mensajes import MensajePersonalizado
 from metodos.falsa_posicion import FalsaPosicion
 from metodos.biseccion import Biseccion
+from metodos.punto_fijo import PuntoFijo
+from metodos.newton_raphson import NewtonRaphson
+from metodos.secante import Secante
 
 
 class VentanaPrincipal(tk.Tk):
@@ -20,6 +24,18 @@ class VentanaPrincipal(tk.Tk):
             "lbl_a": "Límite inferior (a):",
             "lbl_b": "Límite superior (b):",
             "show_b": True,
+            "show_derivada": False,
+            "can_compare": False
+        },
+        "Bisección (Ej. 1 - Hash Table)": {
+            "func": "0.8*x**2 - 3.2*x + np.log(x+1)",
+            "a": "0.5",
+            "b": "2.5",
+            "lbl_a": "Límite a:",
+            "lbl_b": "Límite b:",
+            "show_b": True,
+            "show_derivada": True,
+            "default_derivada": True,
             "can_compare": False
         },
         "Falsa Posición": {
@@ -29,6 +45,7 @@ class VentanaPrincipal(tk.Tk):
             "lbl_a": "Límite inferior (a):",
             "lbl_b": "Límite superior (b):",
             "show_b": True,
+            "show_derivada": False,
             "can_compare": False
         },
         "Punto Fijo": {
@@ -36,6 +53,7 @@ class VentanaPrincipal(tk.Tk):
             "a": "1.0",
             "lbl_a": "Punto inicial (x0):",
             "show_b": False,
+            "show_derivada": False,
             "can_compare": True
         },
         "Newton-Raphson": {
@@ -43,6 +61,7 @@ class VentanaPrincipal(tk.Tk):
             "a": "1.5",
             "lbl_a": "Punto inicial (x0):",
             "show_b": False,
+            "show_derivada": False,
             "can_compare": True
         },
         "Secante": {
@@ -52,6 +71,7 @@ class VentanaPrincipal(tk.Tk):
             "lbl_a": "Punto inicial 0 (x0):",
             "lbl_b": "Punto inicial 1 (x1):",
             "show_b": True,
+            "show_derivada": False,
             "can_compare": False
         }
     }
@@ -102,7 +122,7 @@ class VentanaPrincipal(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Métodos Numéricos - Ingeniería de Software")
-        self.geometry("1200x850")
+        self.geometry("1800x950")
         
         self.tema_actual = "Oscuro"
         self.configure(bg=self.TEMAS[self.tema_actual]["bg_main"])
@@ -167,7 +187,7 @@ class VentanaPrincipal(tk.Tk):
                  font=("Segoe UI", 10, "bold"))
         self.lbl_metodo_titulo.pack(anchor="w", padx=20, pady=(5, 5))
         
-        self.combo_metodo = ttk.Combobox(self.sidebar, values=["Bisección", "Falsa Posición", "Punto Fijo", "Newton-Raphson", "Secante"], state="readonly")
+        self.combo_metodo = ttk.Combobox(self.sidebar, values=list(self.METODOS_CONFIG.keys()), state="readonly")
         self.combo_metodo.pack(fill="x", **padding)
         self.combo_metodo.bind("<<ComboboxSelected>>", self.actualizar_campos_metodo)
 
@@ -189,6 +209,12 @@ class VentanaPrincipal(tk.Tk):
         self.lbl_b = tk.Label(self.frame_params, text="Límite superior (b):", bg=tema["bg_sidebar"], fg=tema["text_sidebar"], font=("Segoe UI", 8))
         self.entry_b = tk.Entry(self.frame_params, bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], bd=0, highlightthickness=1, highlightbackground=tema["border_color"])
 
+        self.var_derivada = tk.BooleanVar(value=False)
+        self.chk_derivada = tk.Checkbutton(self.frame_params, text="Usar Derivada T'(λ) (Encuentra el óptimo)", 
+                                         variable=self.var_derivada, bg=tema["bg_sidebar"], fg=tema["accent_green"], 
+                                         selectcolor=tema["bg_sidebar"], activebackground=tema["bg_sidebar"],
+                                         activeforeground=tema["accent_green"], font=("Segoe UI", 8, "bold"))
+        
         self.var_comparar = tk.BooleanVar(value=True)
         self.chk_comparar = ttk.Checkbutton(self.frame_params, text="Comparar x0 (0.5, 1.0, 1.5, 2.0)", variable=self.var_comparar)
         self.chk_comparar.pack(anchor="w", padx=10, pady=5)
@@ -211,7 +237,7 @@ class VentanaPrincipal(tk.Tk):
         self.var_conv = tk.BooleanVar(value=True)
         ttk.Checkbutton(self.sidebar, text="Mostrar Convergencia (Log)", variable=self.var_conv).pack(anchor="w", **padding)
         self.var_tabla = tk.BooleanVar(value=True)
-        ttk.Checkbutton(self.sidebar, text="Mostrar Tabla", variable=self.var_tabla).pack(anchor="w", **padding)
+        ttk.Checkbutton(self.sidebar, text="Mostrar Tabla", variable=self.var_tabla, command=self.actualizar_visibilidad).pack(anchor="w", **padding)
 
         # Botones Principales (Modernizados con Hover)
         self.frame_btns = tk.Frame(self.sidebar, bg=tema["bg_sidebar"])
@@ -263,30 +289,40 @@ class VentanaPrincipal(tk.Tk):
             self.lbl_b.pack_forget()
             self.entry_b.pack_forget()
 
-        # Control de comparación (solo para métodos de un punto)
+        # Control de visibilidad para 'derivada'
+        if config.get("show_derivada"):
+            self.chk_derivada.pack(anchor="w", padx=10, pady=5, after=self.entry_b if config["show_b"] else self.entry_a)
+            self.var_derivada.set(config.get("default_derivada", False))
+        else:
+            self.chk_derivada.pack_forget()
+            self.var_derivada.set(False)
+
         if config["can_compare"]:
             self.chk_comparar.pack(anchor="w", padx=10, pady=5, after=self.entry_b if config["show_b"] else self.entry_a)
         else:
             self.chk_comparar.pack_forget()
 
     def crear_main_content(self):
-        """Panel derecho con gráficas arriba y tabla abajo."""
+        """Panel derecho con gráficas a la izquierda y tabla a la derecha."""
         tema = self.TEMAS[self.tema_actual]
-        # Contenedor de gráficas
-        self.frame_grafica = tk.Frame(self.contenedor_principal, bg=tema["bg_main"])
-        self.frame_grafica.pack(fill="both", expand=True, padx=10, pady=5)
-        self.graficador = GraficadorDinamico(self.frame_grafica)
-
-        # Contenedor de tabla
-        self.frame_tabla_container = tk.Frame(self.contenedor_principal, bg=tema["bg_main"], height=250)
-        self.frame_tabla_container.pack(fill="x", side="bottom", padx=10, pady=10)
+        
+        # Contenedor de tabla (se empaqueta primero a la derecha para que ocupe su espacio fijo)
+        self.frame_tabla_container = tk.Frame(self.contenedor_principal, bg=tema["bg_main"], width=600)
+        self.frame_tabla_container.pack(side="right", fill="y", padx=10, pady=10)
         self.frame_tabla_container.pack_propagate(False)
+
+        # Contenedor de gráficas (ocupa el resto del espacio a la izquierda)
+        self.frame_grafica = tk.Frame(self.contenedor_principal, bg=tema["bg_main"])
+        self.frame_grafica.pack(side="left", fill="both", expand=True, padx=10, pady=5)
+        self.graficador = GraficadorDinamico(self.frame_grafica)
 
         columnas = ("n", "x_n", "f(x_n)", "Error Abs", "Error Rel (%)")
         self.tabla = ttk.Treeview(self.frame_tabla_container, columns=columnas, show="headings")
         for col in columnas:
             self.tabla.heading(col, text=col)
-            self.tabla.column(col, width=100, anchor="center")
+            # Ajustar anchos para que quepan en el contenedor lateral
+            ancho = 120 if col != "n" else 50
+            self.tabla.column(col, width=ancho, anchor="center")
         
         # Scrollbar para la tabla
         scrolly = ttk.Scrollbar(self.frame_tabla_container, orient="vertical", command=self.tabla.yview)
@@ -307,6 +343,13 @@ class VentanaPrincipal(tk.Tk):
             alpha += 0.05
             self.attributes("-alpha", alpha)
             self.after(30, self.aparecer_paulatinamente)
+
+    def actualizar_visibilidad(self):
+        """Muestra u oculta la tabla según la preferencia del usuario."""
+        if self.var_tabla.get():
+            self.frame_tabla_container.pack(side="right", fill="y", padx=10, pady=10)
+        else:
+            self.frame_tabla_container.pack_forget()
 
     def alternar_tema(self):
         """Cambia entre el tema claro y oscuro."""
@@ -338,6 +381,11 @@ class VentanaPrincipal(tk.Tk):
         self.entry_max_iter.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
         self.frame_btns.config(bg=tema["bg_sidebar"])
         
+        # Actualizar checkbox de derivada
+        self.chk_derivada.config(bg=tema["bg_sidebar"], fg=tema["accent_green"], 
+                                selectcolor=tema["bg_sidebar"], activebackground=tema["bg_sidebar"],
+                                activeforeground=tema["accent_green"])
+        
         # Actualizar botones interactivos
         self.configurar_boton_interactivo(self.btn_calc, tema["btn_calc_bg"], tema["btn_calc_hover"], tema["btn_calc_fg"])
         self.configurar_boton_interactivo(self.btn_clear, tema["btn_clear_bg"], tema["btn_clear_hover"], tema["btn_clear_fg"])
@@ -367,8 +415,24 @@ class VentanaPrincipal(tk.Tk):
         
         try:
             # Crear función segura usando numpy
-            def f_eval(x):
+            def f_eval_base(x):
                 return eval(func_str, {"np": np, "math": np, "x": x})
+
+            # Manejar derivación si está activa (para encontrar óptimos)
+            if self.var_derivada.get():
+                try:
+                    x_sym = sp.Symbol('x')
+                    # Preparar string para sympy (quitar prefijos np. o math.)
+                    func_sp_str = func_str.replace("np.", "").replace("math.", "")
+                    # Manejar logaritmos (np.log -> sp.log)
+                    f_sym = sp.sympify(func_sp_str)
+                    df_sym = sp.diff(f_sym, x_sym)
+                    f_eval = sp.lambdify(x_sym, df_sym, 'numpy')
+                except Exception as e:
+                    print(f"Error en derivación: {e}")
+                    f_eval = f_eval_base
+            else:
+                f_eval = f_eval_base
 
             resultados = []
             
@@ -382,15 +446,10 @@ class VentanaPrincipal(tk.Tk):
             min_iter = float('inf')
 
             for val_a in puntos_a:
-                start_t = time.perf_counter()
-                
                 if metodo_nombre == "Punto Fijo":
-                    from metodos.punto_fijo import PuntoFijo
                     m = PuntoFijo(f_eval, tolerancia=tol, max_iter=max_iter)
                     res = m.calcular(x0=val_a)
                 elif metodo_nombre == "Newton-Raphson":
-                    from metodos.newton_raphson import NewtonRaphson
-                    import sympy as sp
                     x_s = sp.Symbol('x')
                     try:
                         f_s = eval(func_str.replace("np.", "sp.").replace("math.", "sp."), {"sp": sp, "x": x_s})
@@ -403,26 +462,21 @@ class VentanaPrincipal(tk.Tk):
                     
                     m = NewtonRaphson(f_n, df_n, tolerancia=tol, max_iter=max_iter)
                     res = m.calcular(x0=val_a)
-                elif metodo_nombre == "Bisección":
-                    from metodos.biseccion import Biseccion
+                elif metodo_nombre.startswith("Bisección"):
                     val_b = float(self.entry_b.get())
                     m = Biseccion(f_eval, tolerancia=tol, max_iter=max_iter)
                     res = m.calcular(a=val_a, b=val_b)
                 elif metodo_nombre == "Falsa Posición":
-                    from metodos.falsa_posicion import FalsaPosicion
                     val_b = float(self.entry_b.get())
                     m = FalsaPosicion(f_eval, tolerancia=tol, max_iter=max_iter)
                     res = m.calcular(a=val_a, b=val_b)
                 elif metodo_nombre == "Secante":
-                    from metodos.secante import Secante
                     val_b = float(self.entry_b.get())
                     m = Secante(f_eval, tolerancia=tol, max_iter=max_iter)
                     res = m.calcular(x0=val_a, x1=val_b)
                 else:
                     res = {'exito': False, 'mensaje': "Método no reconocido"}
                 
-                end_t = time.perf_counter()
-                res['tiempo_ms'] = (end_t - start_t) * 1000
                 res['x0_inicial'] = val_a
                 resultados.append(res)
                 
@@ -435,7 +489,7 @@ class VentanaPrincipal(tk.Tk):
 
             for item in self.tabla.get_children(): self.tabla.delete(item)
             for fila in mejor_resultado.get('historial', []):
-                self.tabla.insert("", "end", values=(fila['n'], f"{fila['c']:.6f}", f"{fila['f(c)']:.6f}", f"{fila['error_absoluto']:.2e}", f"{fila['error_relativo']:.4f}"))
+                self.tabla.insert("", "end", values=(fila['n'], f"{fila['c']:.6f}", f"{fila.get('f(c)', 0):.6f}", f"{fila['error_absoluto']:.2e}", f"{fila['error_relativo']:.4f}"))
 
             historias = [r['historial'] for r in resultados if r['exito']]
             if historias:
@@ -448,12 +502,13 @@ class VentanaPrincipal(tk.Tk):
                 self.graficador.graficar_metodo(*data_graf)
 
             if mejor_resultado['exito']:
+                tiempo = mejor_resultado.get('tiempo', 0)
                 comp_txt = f"🚀 MÁS RÁPIDO: x0 = {mejor_resultado['x0_inicial']}\n" if len(puntos_a) > 1 else ""
                 txt = (f"{comp_txt}"
                        f"RAÍZ: {mejor_resultado['raiz']:.8f}\n"
                        f"ITERACIONES: {mejor_resultado['iteraciones_totales']}\n"
-                       f"ERROR: {mejor_resultado['historial'][-1]['error_absoluto']:.2e}\n"
-                       f"TIEMPO: {mejor_resultado['tiempo_ms']:.2f} ms")
+                       f"ERROR: {mejor_resultado['historial'][-1]['error_absolute'] if 'error_absolute' in mejor_resultado['historial'][-1] else mejor_resultado['historial'][-1].get('error_absoluto', 0):.2e}\n"
+                       f"TIEMPO: {tiempo:.2f} ms")
                 self.lbl_res_final.config(text=txt)
             else:
                 self.lbl_res_final.config(text=f"Error: {mejor_resultado.get('mensaje', 'No convergió')}")
