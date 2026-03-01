@@ -72,8 +72,10 @@ class VentanaPrincipal(tk.Tk):
             "tree_heading_bg": "#1a1a2e",
             "btn_calc_bg": "#00ff88",
             "btn_calc_fg": "#0b0b14",
+            "btn_calc_hover": "#00cc6e",
             "btn_clear_bg": "#2d2d3d",
-            "btn_clear_fg": "#ffffff"
+            "btn_clear_fg": "#ffffff",
+            "btn_clear_hover": "#3d3d4d"
         },
         "Claro": {
             "bg_main": "#fdfdfd",
@@ -90,8 +92,10 @@ class VentanaPrincipal(tk.Tk):
             "tree_heading_bg": "#e0e0e0",
             "btn_calc_bg": "#218838",
             "btn_calc_fg": "#ffffff",
+            "btn_calc_hover": "#1e7e34",
             "btn_clear_bg": "#6c757d",
-            "btn_clear_fg": "#ffffff"
+            "btn_clear_fg": "#ffffff",
+            "btn_clear_hover": "#5a6268"
         }
     }
 
@@ -132,12 +136,6 @@ class VentanaPrincipal(tk.Tk):
         self.estilo.configure("TLabel", font=("Segoe UI", 10), background=tema["bg_sidebar"], foreground=tema["text_main"])
         self.estilo.configure("Sidebar.TLabel", font=("Segoe UI", 9, "bold"), background=tema["bg_sidebar"], foreground=tema["text_sidebar"])
         
-        self.estilo.configure("Calcular.TButton", font=("Segoe UI", 10, "bold"), background=tema["btn_calc_bg"], foreground=tema["btn_calc_fg"])
-        self.estilo.map("Calcular.TButton", background=[('active', tema["btn_calc_bg"])])
-        
-        self.estilo.configure("Limpiar.TButton", font=("Segoe UI", 10, "bold"), background=tema["btn_clear_bg"], foreground=tema["btn_clear_fg"])
-        self.estilo.map("Limpiar.TButton", background=[('active', tema["btn_clear_bg"])])
-
         self.estilo.configure("Treeview", font=("Consolas", 9), rowheight=25, background=tema["tree_bg"], 
                               fieldbackground=tema["tree_bg"], foreground=tema["tree_fg"])
         self.estilo.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"), background=tema["tree_heading_bg"], foreground=tema["accent_blue"])
@@ -147,15 +145,21 @@ class VentanaPrincipal(tk.Tk):
         # Estilo para el ComboBox
         self.estilo.configure("TCombobox", fieldbackground=tema["entry_bg"], background=tema["bg_sidebar"], foreground=tema["text_main"])
 
+    def configurar_boton_interactivo(self, btn, bg, hover_bg, fg):
+        """Añade efectos de hover y cursor a un botón estándar de tkinter."""
+        btn.configure(bg=bg, fg=fg, activebackground=hover_bg, activeforeground=fg, cursor="hand2")
+        btn.bind("<Enter>", lambda e: btn.configure(bg=hover_bg))
+        btn.bind("<Leave>", lambda e: btn.configure(bg=bg))
+
     def crear_sidebar_content(self):
-        """Construye el contenido de la barra lateral izquierda."""
+        """Construye el contenido de la barra lateral izquierda con botones intuitivos."""
         padding = {"padx": 20, "pady": 5}
         tema = self.TEMAS[self.tema_actual]
         
-        # Botón de cambio de tema
+        # Botón de cambio de tema (Modernizado)
         self.btn_tema = tk.Button(self.sidebar, text="🌙 Modo Oscuro" if self.tema_actual == "Oscuro" else "☀️ Modo Claro",
-                                  bg=tema["btn_clear_bg"], fg=tema["btn_clear_fg"], font=("Segoe UI", 8, "bold"),
-                                  command=self.alternar_tema, bd=0, padx=10, pady=5)
+                                  font=("Segoe UI", 8, "bold"), command=self.alternar_tema, bd=0, padx=10, pady=5)
+        self.configurar_boton_interactivo(self.btn_tema, tema["btn_clear_bg"], tema["btn_clear_hover"], tema["btn_clear_fg"])
         self.btn_tema.pack(anchor="ne", padx=10, pady=10)
 
         # Título del software
@@ -209,11 +213,19 @@ class VentanaPrincipal(tk.Tk):
         self.var_tabla = tk.BooleanVar(value=True)
         ttk.Checkbutton(self.sidebar, text="Mostrar Tabla", variable=self.var_tabla).pack(anchor="w", **padding)
 
-        # Botones
+        # Botones Principales (Modernizados con Hover)
         self.frame_btns = tk.Frame(self.sidebar, bg=tema["bg_sidebar"])
         self.frame_btns.pack(fill="x", padx=20, pady=20)
-        ttk.Button(self.frame_btns, text="▶ Calcular", style="Calcular.TButton", command=self.ejecutar_calculo).pack(side="left", expand=True, fill="x", padx=(0, 5))
-        ttk.Button(self.frame_btns, text="Limpiar", style="Limpiar.TButton", command=self.limpiar_todo).pack(side="left", expand=True, fill="x")
+        
+        self.btn_calc = tk.Button(self.frame_btns, text="▶ CALCULAR", font=("Segoe UI", 10, "bold"), 
+                                 command=self.ejecutar_calculo, bd=0, pady=10)
+        self.configurar_boton_interactivo(self.btn_calc, tema["btn_calc_bg"], tema["btn_calc_hover"], tema["btn_calc_fg"])
+        self.btn_calc.pack(side="left", expand=True, fill="x", padx=(0, 5))
+
+        self.btn_clear = tk.Button(self.frame_btns, text="🗑️ LIMPIAR", font=("Segoe UI", 10, "bold"), 
+                                  command=self.limpiar_todo, bd=0, pady=10)
+        self.configurar_boton_interactivo(self.btn_clear, tema["btn_clear_bg"], tema["btn_clear_hover"], tema["btn_clear_fg"])
+        self.btn_clear.pack(side="left", expand=True, fill="x")
 
         # Resultado Final
         self.frame_res = tk.LabelFrame(self.sidebar, text=" Resultado Final ", bg=tema["bg_sidebar"], fg=tema["accent_green"], font=("Segoe UI", 9, "bold"), bd=1, relief="flat")
@@ -309,8 +321,9 @@ class VentanaPrincipal(tk.Tk):
         self.frame_tabla_container.configure(bg=tema["bg_main"])
         
         # Actualizar widgets del sidebar
-        self.btn_tema.config(text="🌙 Modo Oscuro" if self.tema_actual == "Oscuro" else "☀️ Modo Claro",
-                             bg=tema["btn_clear_bg"], fg=tema["btn_clear_fg"])
+        self.btn_tema.config(text="🌙 Modo Oscuro" if self.tema_actual == "Oscuro" else "☀️ Modo Claro")
+        self.configurar_boton_interactivo(self.btn_tema, tema["btn_clear_bg"], tema["btn_clear_hover"], tema["btn_clear_fg"])
+        
         self.lbl_metodo_titulo.config(bg=tema["bg_sidebar"], fg=tema["text_main"])
         self.frame_params.config(bg=tema["bg_sidebar"], fg=tema["accent_blue"])
         self.lbl_func.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
@@ -324,6 +337,11 @@ class VentanaPrincipal(tk.Tk):
         self.lbl_max_iter.config(bg=tema["bg_sidebar"], fg=tema["text_sidebar"])
         self.entry_max_iter.config(bg=tema["entry_bg"], fg=tema["entry_fg"], insertbackground=tema["entry_fg"], highlightbackground=tema["border_color"])
         self.frame_btns.config(bg=tema["bg_sidebar"])
+        
+        # Actualizar botones interactivos
+        self.configurar_boton_interactivo(self.btn_calc, tema["btn_calc_bg"], tema["btn_calc_hover"], tema["btn_calc_fg"])
+        self.configurar_boton_interactivo(self.btn_clear, tema["btn_clear_bg"], tema["btn_clear_hover"], tema["btn_clear_fg"])
+        
         self.frame_res.config(bg=tema["bg_sidebar"], fg=tema["accent_green"])
         self.lbl_res_final.config(bg=tema["bg_sidebar"], fg=tema["accent_green"])
         
