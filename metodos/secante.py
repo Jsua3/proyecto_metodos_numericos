@@ -22,8 +22,7 @@ class Secante:
                 return {
                     'exito': False, 'raiz': x1, 'iteraciones_totales': n,
                     'evaluaciones': self.evaluaciones_funcion, 'historial': iteraciones_data,
-                    'mensaje': f"Falla del método: División por cero en iteración {n}.",
-                    'tiempo': (time.perf_counter() - inicio_tiempo) * 1000
+                    'mensaje': f"Falla del método: División por cero en iteración {n}."
                 }
 
             # Fórmula del método de la secante
@@ -43,8 +42,7 @@ class Secante:
                 return {
                     'exito': True, 'raiz': x_siguiente, 'iteraciones_totales': n,
                     'evaluaciones': self.evaluaciones_funcion, 'historial': iteraciones_data,
-                    'mensaje': "Convergencia exitosa.",
-                    'tiempo': (time.perf_counter() - inicio_tiempo) * 1000
+                    'mensaje': "Convergencia exitosa."
                 }
 
             x0, fx0 = x1, fx1
@@ -53,6 +51,5 @@ class Secante:
         return {
             'exito': False, 'raiz': x1, 'iteraciones_totales': self.max_iter,
             'evaluaciones': self.evaluaciones_funcion, 'historial': iteraciones_data,
-            'mensaje': "Máximo de iteraciones alcanzado sin convergir.",
-            'tiempo': (time.perf_counter() - inicio_tiempo) * 1000
+            'mensaje': "Máximo de iteraciones alcanzado sin convergir."
         }

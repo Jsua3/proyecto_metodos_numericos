@@ -1,351 +1,287 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+import numpy as np
 import tkinter as tk
 
-class GraficadorDinamico:
-    """
-    Clase encargada del renderizado dinámico de gráficos usando Matplotlib.
-    Implementa visualizaciones específicas para métodos numéricos y análisis de convergencia.
-    """
+def formatear_valor(valor):
+    if valor is None or valor == '-' or valor == '--------':
+        return valor
+    if isinstance(valor, str):
+        return valor
+    try:
+        val = float(valor)
+        if val == 0.0:
+            return "0.00000000"
+        if abs(val) < 1e-4 or abs(val) >= 1e8:
+            return f"{val:.8e}"
+        else:
+            return f"{val:.8f}"
+    except (ValueError, TypeError):
+        return str(valor)
 
-    TEMAS = {
-        "Oscuro": {
-            "face": "#0b0b14",
-            "text": "white",
-            "spine": "#333333",
-            "grid": 0.1,
-            "accent": "#6699ff"
-        },
-        "Claro": {
-            "face": "#fdfdfd",
-            "text": "#1a1a1a",
-            "spine": "#cccccc",
-            "grid": 0.2,
-            "accent": "#0056b3"
-        }
-    }
+class VisualizadorGrafico:
+    def __init__(self, master):
+        self.master = master
+        # Fondo exacto de la ventana principal de la imagen (Azul marino oscuro)
+        self.fig = plt.figure(figsize=(6, 6.5), dpi=100)
+        self.fig.patch.set_facecolor('#1e1e2b')
 
-    def __init__(self, frame_contenedor):
-        """
-        Inicializa la figura y los paneles de visualización.
-        
-        Args:
-            frame_contenedor: El frame de Tkinter donde se incrustará el lienzo.
-        """
-        self.frame = frame_contenedor
-        self.tema_actual = "Oscuro"
-        tema = self.TEMAS[self.tema_actual]
-        
-        # Configuración de la figura
-        self.figura = Figure(figsize=(10, 8), dpi=100, facecolor=tema["face"])
-        
-        # Subplot 1: Panel de Función (Arriba)
-        self.ax1 = self.figura.add_subplot(211)
-        self.ax1.set_facecolor(tema["face"])
-        self.ax1.tick_params(colors=tema["text"], labelsize=9)
-        for spine in self.ax1.spines.values():
-            spine.set_color(tema["spine"])
-            
-        # Subplot 2: Panel de Convergencia (Abajo)
-        self.ax2 = self.figura.add_subplot(212)
-        self.ax2.set_facecolor(tema["face"])
-        self.ax2.tick_params(colors=tema["text"], labelsize=9)
-        for spine in self.ax2.spines.values():
-            spine.set_color(tema["spine"])
-        
-        self.figura.tight_layout(pad=4.0)
-        
-        # Integración con Tkinter
-        self.canvas = FigureCanvasTkAgg(self.figura, master=self.frame)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.master)
         self.widget = self.canvas.get_tk_widget()
-        self.widget.pack(fill="both", expand=True)
-        self.widget.configure(bg=tema["face"])
-        
-        # Tooltip para hover
-        self.tooltip = None
-        
-        # Conectar eventos de interactividad
-        self.canvas.mpl_connect("scroll_event", self.on_zoom)
+        self.widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        self.frame_toolbar = tk.Frame(self.master, bg='#1e1e2b')
+        self.frame_toolbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.frame_toolbar)
+        self.toolbar.config(background='#1e1e2b')
+        for button in self.toolbar.winfo_children():
+            button.config(background='#1e1e2b')
+        self.toolbar.update()
+        self.toolbar.pan()
+
+        self.canvas.mpl_connect("scroll_event", self.zoom_rueda_raton)
         self.canvas.mpl_connect("motion_notify_event", self.on_hover)
-        
-        self.datos_puntos_ax2 = [] # Puntos para ax2
-        self.curva_ax1 = None # Guardar referencia a la curva principal para hover
 
-    def limpiar(self):
-        """Limpia ambos paneles para un nuevo gráfico."""
-        tema = self.TEMAS[self.tema_actual]
-        self.ax1.clear()
-        self.ax2.clear()
-        self.ax1.set_facecolor(tema["face"])
-        self.ax2.set_facecolor(tema["face"])
-        self.ax1.tick_params(colors=tema["text"])
-        self.ax2.tick_params(colors=tema["text"])
-        for spine in self.ax1.spines.values(): spine.set_color(tema["spine"])
-        for spine in self.ax2.spines.values(): spine.set_color(tema["spine"])
-        
-        self.datos_puntos_ax2 = []
-        self.curva_ax1 = None
-        if self.tooltip:
-            try:
-                self.tooltip.remove()
-            except:
-                pass
-            self.tooltip = None
+        self.tema_actual = None
+        self.annot1 = None
+        self.annot2 = None
+        self.ax1 = None
+        self.ax2 = None
 
-    def set_tema(self, nuevo_tema):
-        """Actualiza el tema de los gráficos."""
-        if nuevo_tema in self.TEMAS:
-            self.tema_actual = nuevo_tema
-            tema = self.TEMAS[self.tema_actual]
-            self.figura.set_facecolor(tema["face"])
-            self.widget.configure(bg=tema["face"])
-            self.limpiar()
-            self.canvas.draw()
+    def zoom_rueda_raton(self, event):
+        if event.inaxes is None or event.inaxes not in [self.ax1, self.ax2]: return
+        escala = 1 / 1.2 if event.button == 'up' else 1.2
+        ax = event.inaxes
+        x_min, x_max = ax.get_xlim()
+        y_min, y_max = ax.get_ylim()
+        n_ancho, n_alto = (x_max - x_min) * escala, (y_max - y_min) * escala
+        rx, ry = (event.xdata - x_min) / (x_max - x_min), (event.ydata - y_min) / (y_max - y_min)
 
-    def graficar_metodo(self, metodo_nombre, funcion, historial, raiz, extra_params=None):
-        """
-        Grafica los resultados de un método específico.
-        Permite recibir una lista de historiales para comparación si es necesario.
-        """
-        self.limpiar()
-        colores_multi = ['#66ffff', '#55ff55', '#ffaa00', '#aa66ff']
-        
-        # 1. Graficar en ax1 (Panel de Función)
-        tema = self.TEMAS[self.tema_actual]
-        self.ax1.set_title(f"Convergencia - {metodo_nombre}", color=tema["text"], fontweight='bold', pad=15)
-        
-        # Determinar rango dinámico
-        todas_x = []
-        if isinstance(historial, list) and len(historial) > 0 and isinstance(historial[0], list):
-            # Caso comparación de múltiples historiales
-            for h_list in historial:
-                for h in h_list:
-                    if 'c' in h: todas_x.append(h['c'])
-                    elif 'x_n' in h: todas_x.append(h['x_n'])
-            es_comparacion = True
-        else:
-            # Caso simple
-            for h in historial:
-                if 'c' in h: todas_x.append(h['c'])
-                elif 'x_n' in h: todas_x.append(h['x_n'])
-            es_comparacion = False
-            
-        if not todas_x: todas_x = [raiz]
-            
-        min_x = min(todas_x + [raiz]) - 0.5
-        max_x = max(todas_x + [raiz]) + 0.5
-        
-        x = np.linspace(min_x, max_x, 500)
-        y = [funcion(val) for val in x]
-        
-        # Guardar referencia para hover
-        self.curva_ax1, = self.ax1.plot(x, y, color=tema["accent"], linewidth=2, label='f(x)' if metodo_nombre != "Punto Fijo" else 'y = g(x)')
-        self.ax1.fill_between(x, y, 0, color=tema["accent"], alpha=0.05)
-        
-        if metodo_nombre == "Punto Fijo":
-            self.ax1.plot(x, x, color=tema["text"], linestyle='--', alpha=0.4, label='y = x')
-
-        self.ax1.axhline(0, color=tema["spine"], linewidth=0.8)
-        
-        # Dibujar puntos de convergencia
-        if es_comparacion:
-            self.datos_puntos_ax2 = []
-            for idx, h_list in enumerate(historial):
-                label_x0 = f"x0={h_list[0].get('c', h_list[0].get('x_n-1', 'x'))}" if h_list else "x0"
-                color = colores_multi[idx % len(colores_multi)]
-                
-                # Puntos en ax1
-                puntos_x = [h.get('c', h.get('x_n', 0)) for h in h_list]
-                puntos_y = [funcion(px) for px in puntos_x]
-                self.ax1.plot(puntos_x, puntos_y, 'o', color=color, markersize=5, alpha=0.7, label=label_x0)
-                
-                # Líneas en ax2
-                it = [h['n'] for h in h_list]
-                err = [h['error_absoluto'] for h in h_list]
-                self.ax2.semilogy(it, err, 's-', color=color, markersize=4, label=label_x0, linewidth=1.5)
-                self.datos_puntos_ax2.append((it, err, label_x0, color))
-        else:
-            # Caso simple
-            puntos_x = [h.get('c', h.get('x_n', 0)) for h in historial]
-            puntos_y = [funcion(px) for px in puntos_x]
-            self.ax1.plot(puntos_x, puntos_y, 'o', color='#ffaa00', markersize=5, alpha=0.8)
-            
-            # ax2 simple
-            it = [h['n'] for h in historial]
-            err = [h['error_absoluto'] for h in historial]
-            self.ax2.semilogy(it, err, 'o-', color=tema["accent"], markersize=4)
-            self.ax2.fill_between(it, err, 1e-20, color=tema["accent"], alpha=0.1)
-            self.datos_puntos_ax2 = [(it, err, "Error", tema["accent"])]
-
-        # Raíz estrella roja
-        self.ax1.plot(raiz, funcion(raiz), '*', color='#ff5555', markersize=15, label=f'Raíz: {raiz:.6f}', zorder=5)
-        
-        self.ax1.legend(facecolor=tema["face"], edgecolor=tema["spine"], labelcolor=tema["text"], fontsize=8)
-        self.ax1.grid(True, alpha=tema["grid"])
-
-        # Config ax2
-        self.ax2.set_title("Convergencia del Error Absoluto (escala log)", color=tema["text"], fontweight='bold', fontsize=10)
-        self.ax2.set_xlabel("Iteración n", color=tema["text"], fontsize=9)
-        self.ax2.set_ylabel("Error absoluto", color=tema["text"], fontsize=9)
-        self.ax2.grid(True, which="both", ls="-", alpha=tema["grid"] / 2)
-        if es_comparacion:
-            self.ax2.legend(facecolor=tema["face"], edgecolor=tema["spine"], labelcolor=tema["text"], fontsize=8)
-        
-        self.canvas.draw()
-
-    def _graficar_cobweb(self, g, historial):
-        """Implementa el gráfico de Telaraña (Cobweb)."""
-        # Dibujar la línea y=x
-        x_min, x_max = self.ax1.get_xlim()
-        self.ax1.plot([x_min, x_max], [x_min, x_max], color='white', linestyle='--', alpha=0.5, label='y=x')
-        
-        for i in range(min(len(historial), 15)):
-            h = historial[i]
-            x_n = h['c']
-            g_xn = h['f(c)'] # En punto fijo guardamos g(x_n) en f(c)
-            
-            # (x_n, x_n) -> (x_n, g(x_n))
-            self.ax1.plot([x_n, x_n], [x_n, g_xn], color='yellow', alpha=0.6, linewidth=1)
-            # (x_n, g(x_n)) -> (g(x_n), g(x_n))
-            if i + 1 < len(historial):
-                x_next = historial[i+1]['c']
-                self.ax1.plot([x_n, x_next], [g_xn, x_next], color='yellow', alpha=0.6, linewidth=1)
-
-    def _graficar_tangentes(self, f, historial, derivada_func):
-        """Dibuja las rectas tangentes para Newton-Raphson."""
-        for i in range(min(len(historial), 3)): # Solo las primeras 3 para no saturar
-            h = historial[i]
-            xn = h['c']
-            fxn = h['f(c)']
-            dfxn = h['f_prima(c)']
-            
-            # y = f'(x_n)*(x - x_n) + f(x_n)
-            # Queremos ver dónde cruza el eje x (y=0) -> 0 = dfxn*(x - xn) + fxn -> x = xn - fxn/dfxn
-            x_next = xn - fxn/dfxn
-            
-            x_range = np.linspace(min(xn, x_next) - 0.2, max(xn, x_next) + 0.2, 10)
-            y_tangent = dfxn * (x_range - xn) + fxn
-            self.ax1.plot(x_range, y_tangent, 'y--', alpha=0.7)
-            self.ax1.plot([xn, xn], [0, fxn], 'white', linestyle=':', alpha=0.5)
-
-    def _graficar_secantes(self, f, historial):
-        """Dibuja las líneas secantes."""
-        for i in range(min(len(historial), 5)):
-            h = historial[i]
-            x0 = h['x_n-1']
-            x1 = h['c']
-            fx0 = h['f(x_n-1)']
-            fx1 = h['f(c)']
-            
-            # Línea que pasa por (x0, fx0) y (x1, fx1)
-            x_vals = np.array([x0, x1])
-            y_vals = np.array([fx0, fx1])
-            
-            # Extender la línea hasta el eje X
-            if fx1 != fx0:
-                x_interseccion = x1 - fx1 * (x1 - x0) / (fx1 - fx0)
-                x_plot = np.linspace(min(x0, x1, x_interseccion), max(x0, x1, x_interseccion), 10)
-                m = (fx1 - fx0) / (x1 - x0)
-                y_plot = m * (x_plot - x1) + fx1
-                self.ax1.plot(x_plot, y_plot, 'y--', alpha=0.6)
-
-    def graficar_comparacion(self, titulo, historial_1, label_1, historial_2, label_2):
-        """
-        Grafica la comparación de convergencia de dos métodos.
-        """
-        self.limpiar()
-        tema = self.TEMAS[self.tema_actual]
-        self.ax1.axis('off') # Ocultar panel de función en comparación si se prefiere, o mostrar ambos
-        self.ax1.text(0.5, 0.5, "Comparación de\nConvergencia", color=tema["text"], 
-                     ha='center', va='center', fontsize=14)
-        
-        self.ax2.set_title(titulo, color=tema["text"])
-        self.ax2.set_xlabel("Iteración", color=tema["text"])
-        self.ax2.set_ylabel("Error Absoluto", color=tema["text"])
-        
-        # Método 1
-        it1 = [h['n'] for h in historial_1]
-        err1 = [h['error_absoluto'] for h in historial_1]
-        self.ax2.semilogy(it1, err1, 'o-', label=label_1, markersize=4)
-        
-        # Método 2
-        it2 = [h['n'] for h in historial_2]
-        err2 = [h['error_absoluto'] for h in historial_2]
-        self.ax2.semilogy(it2, err2, 'x--', label=label_2, markersize=4)
-        
-        self.ax2.grid(True, which="both", ls="-", alpha=0.2)
-        self.ax2.legend()
-        
-        self.canvas.draw()
-
-    def on_zoom(self, event):
-        """Maneja el zoom con la rueda del ratón."""
-        if event.inaxes == self.ax1:
-            base_scale = 1.1
-            if event.button == 'up':
-                scale_factor = 1 / base_scale
-            elif event.button == 'down':
-                scale_factor = base_scale
-            else:
-                scale_factor = 1
-            
-            cur_xlim = self.ax1.get_xlim()
-            cur_ylim = self.ax1.get_ylim()
-            
-            new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
-            new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
-            
-            relx = (cur_xlim[1] - event.xdata) / (cur_xlim[1] - cur_xlim[0])
-            rely = (cur_ylim[1] - event.ydata) / (cur_ylim[1] - cur_ylim[0])
-            
-            self.ax1.set_xlim([event.xdata - new_width * (1 - relx), event.xdata + new_width * relx])
-            self.ax1.set_ylim([event.ydata - new_height * (1 - rely), event.ydata + new_height * rely])
-            self.canvas.draw()
+        ax.set_xlim([event.xdata - n_ancho * rx, event.xdata + n_ancho * (1 - rx)])
+        ax.set_ylim([event.ydata - n_alto * ry, event.ydata + n_alto * (1 - ry)])
+        self.canvas.draw_idle()
 
     def on_hover(self, event):
-        """Muestra un tooltip al pasar el mouse por los puntos de convergencia o la curva principal."""
-        if not event.inaxes:
-            if self.tooltip:
-                try: self.tooltip.remove()
-                except: pass
-                self.tooltip = None
+        """Muestra tooltips al pasar el ratón."""
+        if event.inaxes is None:
+            es_visible = False
+            if self.annot1 and self.annot1.get_visible():
+                self.annot1.set_visible(False)
+                es_visible = True
+            if self.annot2 and self.annot2.get_visible():
+                self.annot2.set_visible(False)
+                es_visible = True
+            if es_visible:
                 self.canvas.draw_idle()
             return
 
-        if event.inaxes == self.ax2:
-            tema = self.TEMAS[self.tema_actual]
-            # Hover en gráfica de convergencia
-            for data in self.datos_puntos_ax2:
-                it_list, err_list, label, color = data
-                for it, err in zip(it_list, err_list):
-                    if abs(event.xdata - it) < 0.5 and abs(np.log10(event.ydata) - np.log10(err)) < 0.3:
-                        if self.tooltip: self.tooltip.remove()
-                        self.tooltip = self.ax2.annotate(
-                            f"{label}\nIter: {it}\nError: {err:.2e}",
-                            xy=(it, err), xytext=(15, 15), textcoords="offset points",
-                            bbox=dict(boxstyle="round", fc=tema["face"], ec=color, alpha=0.9),
-                            color=tema["text"], fontsize=8, arrowprops=dict(arrowstyle="->", color=color)
-                        )
-                        self.canvas.draw_idle()
-                        return
-        
-        elif event.inaxes == self.ax1:
-            tema = self.TEMAS[self.tema_actual]
-            # Hover en gráfica principal (mostrar coordenadas dinámicas)
-            if event.xdata is not None and event.ydata is not None:
-                if self.tooltip: self.tooltip.remove()
-                self.tooltip = self.ax1.annotate(
-                    f"x = {event.xdata:.4f}\ny = {event.ydata:.4f}",
-                    xy=(event.xdata, event.ydata), xytext=(15, 15), textcoords="offset points",
-                    bbox=dict(boxstyle="round", fc=tema["face"], ec=tema["accent"], alpha=0.9),
-                    color=tema["text"], fontsize=8, arrowprops=dict(arrowstyle="->", color=tema["accent"])
-                )
-                self.canvas.draw_idle()
-                return
-
-        if self.tooltip:
-            self.tooltip.remove()
-            self.tooltip = None
+        if event.inaxes == self.ax1 and self.annot1 is not None:
+            self.annot1.xy = (event.xdata, event.ydata)
+            self.annot1.set_text(f"x = {formatear_valor(event.xdata)}\nf(x) = {formatear_valor(event.ydata)}")
+            self.annot1.set_visible(True)
+            if self.annot2: self.annot2.set_visible(False)
             self.canvas.draw_idle()
+
+        elif event.inaxes == self.ax2 and self.annot2 is not None:
+            self.annot2.xy = (event.xdata, event.ydata)
+            self.annot2.set_text(f"Iter = {event.xdata:.1f}\nErr = {formatear_valor(event.ydata)}")
+            self.annot2.set_visible(True)
+            if self.annot1: self.annot1.set_visible(False)
+            self.canvas.draw_idle()
+
+    def actualizar_tema(self, tema):
+        self.tema_actual = tema
+        self.fig.patch.set_facecolor(tema["bg_principal"])
+        self.frame_toolbar.config(bg=tema["bg_principal"])
+        self.toolbar.config(background=tema["bg_principal"])
+        for button in self.toolbar.winfo_children():
+            try:
+                button.config(background=tema["bg_principal"])
+            except tk.TclError:
+                pass
+        for ax in [self.ax1, self.ax2]:
+            if ax is not None:
+                ax.set_facecolor(tema["bg_paneles"])
+                ax.tick_params(colors=tema["texto"])
+                ax.title.set_color(tema["texto"])
+                ax.xaxis.label.set_color(tema["texto"])
+                ax.yaxis.label.set_color(tema["texto"])
+                leg = ax.get_legend()
+                if leg:
+                    leg.get_frame().set_facecolor(tema["bg_principal"])
+                    for text in leg.get_texts():
+                        text.set_color(tema["texto"])
+        self.canvas.draw()
+
+    def graficar_metodo(self, f, raiz, historial, titulo, mostrar_secantes=False, mostrar_tangentes=False,
+                        mostrar_convergencia=False, mostrar_principal=True, historiales_multiples=None,
+                        historial_secundario=None, nombre_metodo=""):
+        self.fig.clf()
+        self.ax1 = None
+        self.ax2 = None
+        bg_main = self.tema_actual["bg_principal"] if self.tema_actual else "#1e1e2b"
+        bg_axes = self.tema_actual["bg_paneles"] if self.tema_actual else "#242436"
+        txt_color = self.tema_actual["texto"] if self.tema_actual else "#c8c8d8"
+
+        tiene_conv = False
+        errores_log = []
+        iteraciones_n = []
+
+        if historiales_multiples or historial_secundario:
+            tiene_conv = mostrar_convergencia
+        else:
+            if historial:
+                for iteracion in historial:
+                    err = iteracion.get('error_absoluto', 0)
+                    if err > 0:
+                        errores_log.append(err)
+                        iteraciones_n.append(iteracion.get('n', iteracion.get('iter', 0)))
+            tiene_conv = mostrar_convergencia and len(errores_log) > 0
+
+        if mostrar_principal and tiene_conv:
+            gs = self.fig.add_gridspec(2, 1, height_ratios=[2, 1.2])
+            self.ax1 = self.fig.add_subplot(gs[0])
+            self.ax2 = self.fig.add_subplot(gs[1])
+        elif mostrar_principal and not tiene_conv:
+            self.ax1 = self.fig.add_subplot(111)
+        elif not mostrar_principal and tiene_conv:
+            self.ax2 = self.fig.add_subplot(111)
+        else:
+            self.canvas.draw()
+            return self.master
+
+        # --- PANEL SUPERIOR ---
+        if self.ax1 is not None:
+            # Fondo exacto interior del plot (Un poco más claro que el fondo general)
+            self.ax1.set_facecolor(bg_axes)
+            es_punto_fijo = "Punto Fijo" in nombre_metodo
+
+            x_min, x_max = (0.0, 3.0) if es_punto_fijo else (raiz - 2.0, raiz + 2.0)
+            x = np.linspace(x_min, x_max, 400)
+            try:
+                y = [f(val) for val in x]
+            except:
+                y = np.zeros_like(x)
+
+            if es_punto_fijo:
+                self.ax1.plot(x, x, color='#6272a4', linestyle='--', linewidth=1.2, label='y = x')
+                self.ax1.plot(x, y, color='#8be9fd', linewidth=2.0, label='y = g(x)')
+                self.ax1.axhline(0, color='#6272a4', linewidth=0.5, alpha=0.5)
+
+                if historial and not historiales_multiples:
+                    x0 = historial[0].get('c', 0)
+                    cobweb_xs, cobweb_ys = [x0], [x0]
+                    x_cur = x0
+                    for it in historial:
+                        gx = it.get('f(c)', 0)
+                        cobweb_xs.extend([x_cur, x_cur, gx])
+                        cobweb_ys.extend([x_cur, gx, gx])
+                        x_cur = gx
+                    self.ax1.plot(cobweb_xs, cobweb_ys, color='#ff79c6', linewidth=1.2, alpha=0.8, label='Cobweb')
+                    self.ax1.scatter([x0], [x0], color='#50fa7b', zorder=6, s=70, label=f'x0={x0}')
+            else:
+                # Línea celeste principal como en la imagen
+                self.ax1.plot(x, y, color='#6699ff', label='f(x)', linewidth=2.5)
+                self.ax1.axhline(0, color='#4e4e6a', linewidth=1, linestyle='--')
+
+            if historiales_multiples:
+                colores_multi = ['#ff79c6', '#50fa7b', '#ffb86c', '#bd93f9', '#8be9fd']
+                for i, (val_x0, hist) in enumerate(historiales_multiples.items()):
+                    color = colores_multi[i % len(colores_multi)]
+                    x_pts = [it.get('c', it.get('x_n', 0)) for it in hist]
+                    y_pts = [it.get('f(c)', it.get('g_xn', 0)) for it in hist]
+                    self.ax1.plot(x_pts, y_pts, marker='o', linestyle='-', color=color, alpha=0.8, label=f'x0={val_x0}')
+
+            elif historial_secundario:
+                cs1 = [rec.get('c', 0) for rec in historial]
+                fcs1 = [rec.get('f(c)', 0) for rec in historial]
+                self.ax1.scatter(cs1, fcs1, marker='x', s=60, color='#8be9fd', zorder=5, label='M. Principal')
+
+                cs2 = [rec.get('c', 0) for rec in historial_secundario]
+                fcs2 = [rec.get('f(c)', 0) for rec in historial_secundario]
+                self.ax1.scatter(cs2, fcs2, marker='o', s=40, color='#ffb86c', zorder=4, alpha=0.7,
+                                 label='M. Secundario')
+
+            elif historial and not es_punto_fijo:
+                for i, iteracion in enumerate(historial):
+                    if i < 4:
+                        x_n = iteracion.get('c', iteracion.get('x_n', 0))
+                        f_n = iteracion.get('f(c)', iteracion.get('f(x_n)', 0))
+                        if mostrar_tangentes:
+                            df_n = iteracion.get('f_prima(c)', 0)
+                            if df_n != 0:
+                                y_tang = [df_n * (xv - x_n) + f_n for xv in x]
+                                self.ax1.plot(x, y_tang, linestyle='-.', alpha=0.6, color="#ffb86c")
+                                self.ax1.plot([x_n, x_n], [0, f_n], linestyle=':', color='#50fa7b', alpha=0.8)
+                        elif mostrar_secantes:
+                            x_n_1 = iteracion.get('x_n-1', 0)
+                            f_n_1 = iteracion.get('f(x_n-1)', 0)
+                            x_next = iteracion.get('x_n+1', 0)
+                            # Puntos naranjas como en la imagen
+                            self.ax1.plot([x_n_1, x_n, x_next], [f_n_1, f_n, 0], marker='o', markersize=6,
+                                          linestyle='-', color='#ffb86c', alpha=0.9)
+
+            # Estrella rosada/roja para la raíz
+            self.ax1.plot(raiz, f(raiz) if not es_punto_fijo else raiz, marker='*', color='#ff5555', markersize=14,
+                          label=f'Raíz: {formatear_valor(raiz)}', zorder=10)
+
+            self.ax1.set_title(titulo, color=txt_color, fontsize=11, fontweight='bold')
+            self.ax1.tick_params(colors=txt_color, labelsize=8)
+            # Grid sutil
+            self.ax1.grid(True, color='#3a3a50', linestyle=':', alpha=0.8)
+            self.ax1.legend(loc='best', facecolor=bg_main, edgecolor='#3a3a50', labelcolor=txt_color, fontsize=8)
+
+            # Tooltip 1
+            self.annot1 = self.ax1.annotate("", xy=(0, 0), xytext=(20, 20), textcoords="offset points",
+                                            bbox=dict(boxstyle="round,pad=0.4", fc="#181825", ec="#7393ff", alpha=0.9),
+                                            color="#e0e0e0", fontfamily="monospace", fontsize=9,
+                                            arrowprops=dict(arrowstyle="->", color="#e0e0e0"))
+            self.annot1.set_visible(False)
+
+        # --- PANEL INFERIOR ---
+        if self.ax2 is not None:
+            self.ax2.set_facecolor(bg_axes)
+
+            if historiales_multiples:
+                colores_multi = ['#ff79c6', '#50fa7b', '#ffb86c', '#bd93f9', '#8be9fd']
+                for i, (val_x0, hist) in enumerate(historiales_multiples.items()):
+                    color = colores_multi[i % len(colores_multi)]
+                    e_log = [it.get('error_absoluto', 0) for it in hist if it.get('error_absoluto', 0) > 0]
+                    i_n = [it.get('n', it.get('iter', 0)) for it in hist if it.get('error_absoluto', 0) > 0]
+                    self.ax2.plot(i_n, e_log, marker='s', color=color, linewidth=2, label=f'x0={val_x0}')
+
+            elif historial_secundario:
+                e1 = [it.get('error_absoluto', 0) for it in historial if it.get('error_absoluto', 0) > 0]
+                n1 = [it.get('n', 0) for it in historial if it.get('error_absoluto', 0) > 0]
+                self.ax2.plot(n1, e1, marker='s', color='#8be9fd', linewidth=2, label='M. Principal')
+
+                e2 = [it.get('error_absoluto', 0) for it in historial_secundario if it.get('error_absoluto', 0) > 0]
+                n2 = [it.get('n', 0) for it in historial_secundario if it.get('error_absoluto', 0) > 0]
+                self.ax2.plot(n2, e2, marker='o', color='#ffb86c', linewidth=2, label='M. Secundario')
+
+            else:
+                # Línea verde de error como en la imagen
+                self.ax2.plot(iteraciones_n, errores_log, marker='o', markersize=5, color='#a6e3a1', linewidth=2,
+                              label='Error absoluto')
+                for n_val, err_val in zip(iteraciones_n, errores_log):
+                    self.ax2.annotate(f"{err_val:.1e}", (n_val, err_val), textcoords="offset points", xytext=(0, 8),
+                                      ha='center', fontsize=7, color='#a0a0b0')
+
+            self.ax2.set_yscale('log')
+            self.ax2.set_title('Convergencia del Error Absoluto (escala log)', color=txt_color, fontsize=10)
+            self.ax2.set_ylabel('Error absoluto', color=txt_color, fontsize=9)
+            self.ax2.set_xlabel('Iteración n', color=txt_color, fontsize=9)
+            self.ax2.tick_params(colors=txt_color, labelsize=8)
+            self.ax2.legend(loc='best', facecolor=bg_main, edgecolor='#3a3a50', labelcolor=txt_color, fontsize=8)
+            self.ax2.grid(True, which="both", color='#3a3a50', linestyle='-', alpha=0.5)
+
+            # Tooltip 2
+            self.annot2 = self.ax2.annotate("", xy=(0, 0), xytext=(20, 20), textcoords="offset points",
+                                            bbox=dict(boxstyle="round,pad=0.4", fc="#181825", ec="#a6e3a1", alpha=0.9),
+                                            color="#e0e0e0", fontfamily="monospace", fontsize=9,
+                                            arrowprops=dict(arrowstyle="->", color="#e0e0e0"))
+            self.annot2.set_visible(False)
+
+        self.fig.tight_layout(pad=2.0)
+        self.canvas.draw()
+        return self.master

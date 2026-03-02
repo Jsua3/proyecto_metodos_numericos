@@ -1,5 +1,4 @@
 from typing import Callable, Dict, List, Union
-import time
 
 class NewtonRaphson:
     """
@@ -24,8 +23,13 @@ class NewtonRaphson:
     def calcular(self, x0: float) -> Dict[str, Union[float, int, List[Dict[str, float]], str]]:
         """
         Ejecuta la iteración de Newton-Raphson a partir del valor inicial x0.
+
+        Args:
+            x0: Aproximación inicial (ej: n0 = 3.0).
+
+        Returns:
+            Un diccionario con los resultados estandarizados para la interfaz gráfica.
         """
-        inicio_tiempo = time.perf_counter()
         iteraciones_data = []
         x_actual = x0
 
@@ -33,35 +37,50 @@ class NewtonRaphson:
             fx = self.funcion(x_actual)
             dfx = self.derivada(x_actual)
 
+            # Validación exigida: evitar división por cero si la tangente es completamente horizontal
             if dfx == 0:
                 return {
-                    'exito': False, 'raiz': x_actual, 'iteraciones_totales': n,
+                    'exito': False,
+                    'raiz': x_actual,
+                    'iteraciones_totales': n,
                     'historial': iteraciones_data,
-                    'mensaje': f"Falla del método: La derivada f'(x) se hizo cero en la iteración {n}.",
-                    'tiempo': (time.perf_counter() - inicio_tiempo) * 1000
+                    'mensaje': f"Falla del método: La derivada f'(x) se hizo cero en la iteración {n}."
                 }
 
+            # Fórmula central de Newton-Raphson
             x_siguiente = x_actual - (fx / dfx)
 
+            # Cálculo de errores
             error_absoluto = abs(x_siguiente - x_actual)
             error_relativo = abs(x_siguiente - x_actual) / abs(x_siguiente) if x_siguiente != 0 else 0.0
 
+            # Se guardan los datos, incluyendo f'(x_n) y el x_n+1 exigido en la revisión
             iteraciones_data.append({
-                'n': n, 'c': x_actual, 'f(c)': fx, 'f_prima(c)': dfx,
-                'error_absoluto': error_absoluto, 'error_relativo': error_relativo * 100
+                'n': n,
+                'c': x_actual,
+                'f(c)': fx,
+                'f_prima(c)': dfx,
+                'x_n+1': x_siguiente,
+                'error_absoluto': error_absoluto,
+                'error_relativo': error_relativo * 100
             })
 
-            if error_absoluto < self.tolerancia:
+            # Criterio de parada (se frena inmediatamente si la evaluación de la nueva raíz es 0)
+            if error_absoluto < self.tolerancia or abs(self.funcion(x_siguiente)) < 1e-15:
                 return {
-                    'exito': True, 'raiz': x_siguiente, 'iteraciones_totales': n,
-                    'historial': iteraciones_data, 'mensaje': "Convergencia exitosa.",
-                    'tiempo': (time.perf_counter() - inicio_tiempo) * 1000
+                    'exito': True,
+                    'raiz': x_siguiente,
+                    'iteraciones_totales': n,
+                    'historial': iteraciones_data,
+                    'mensaje': "Convergencia exitosa."
                 }
 
             x_actual = x_siguiente
 
         return {
-            'exito': False, 'raiz': x_actual, 'iteraciones_totales': self.max_iter,
-            'historial': iteraciones_data, 'mensaje': "Máximo de iteraciones alcanzado sin convergir.",
-            'tiempo': (time.perf_counter() - inicio_tiempo) * 1000
+            'exito': False,
+            'raiz': x_actual,
+            'iteraciones_totales': self.max_iter,
+            'historial': iteraciones_data,
+            'mensaje': "Máximo de iteraciones alcanzado sin convergir."
         }
